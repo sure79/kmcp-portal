@@ -4,27 +4,87 @@ async function renderUsers() {
     <div class="page-header">
       <div>
         <h2 class="page-title">설정</h2>
-        <p class="page-subtitle">사용자 계정을 관리하세요</p>
+        <p class="page-subtitle">사용자 계정 및 가입 승인을 관리하세요</p>
       </div>
       <button class="btn btn-coral" onclick="openUserForm()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         사용자 추가
       </button>
     </div>
+
+    <!-- 승인 대기 -->
+    <div id="pending-section"></div>
+
+    <!-- 전체 사용자 -->
     <div class="card" style="padding:0;overflow:hidden">
       <table class="user-table">
         <thead>
-          <tr><th>이름</th><th>부서</th><th>직급</th><th>아이디</th><th>권한</th><th>등록일</th><th style="text-align:right">관리</th></tr>
+          <tr><th>이름</th><th>부서</th><th>직급</th><th>아이디</th><th>상태</th><th>등록일</th><th style="text-align:right">관리</th></tr>
         </thead>
         <tbody id="users-tbody"></tbody>
       </table>
     </div>
   `;
+  loadPendingUsers();
   loadUsers();
 }
 
+async function loadPendingUsers() {
+  const pending = await api.users.pending().catch(() => []);
+  const section = document.getElementById('pending-section');
+
+  if (pending.length === 0) {
+    section.innerHTML = '';
+    return;
+  }
+
+  section.innerHTML = `
+    <div class="card mb-16 pending-card">
+      <div class="card-header">
+        <div class="card-title">가입 승인 대기 (${pending.length}명)</div>
+      </div>
+      <div class="pending-list">
+        ${pending.map(u => `
+          <div class="pending-item">
+            <div class="avatar avatar-sm ${getAvatarColor(u.name)}">${u.name.slice(0,1)}</div>
+            <div class="pending-info">
+              <div class="pending-name">${u.name}</div>
+              <div class="pending-meta">${u.department || '-'} · ${u.position || '-'} · @${u.username}</div>
+              <div class="pending-date">${u.created_at?.split('T')[0] || ''} 가입 신청</div>
+            </div>
+            <div class="pending-actions">
+              <button class="btn btn-success btn-sm" onclick="approveUser(${u.id}, '${u.name}')">승인</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="rejectUser(${u.id}, '${u.name}')">거절</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function approveUser(id, name) {
+  if (!confirm(`"${name}" 님의 가입을 승인하시겠습니까?`)) return;
+  try {
+    await api.users.approve(id);
+    toast(`${name} 님이 승인되었습니다`);
+    loadPendingUsers();
+    loadUsers();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function rejectUser(id, name) {
+  if (!confirm(`"${name}" 님의 가입을 거절하시겠습니까? (계정이 삭제됩니다)`)) return;
+  try {
+    await api.users.reject(id);
+    toast(`${name} 님의 가입이 거절되었습니다`);
+    loadPendingUsers();
+    loadUsers();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
 async function loadUsers() {
-  const users = await api.users.list().catch(() => []);
+  const users = await api.users.list(true).catch(() => []);
   const tbody = document.getElementById('users-tbody');
   if (!users.length) {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:32px">등록된 사용자가 없습니다</td></tr>`;
@@ -32,8 +92,13 @@ async function loadUsers() {
   }
   tbody.innerHTML = users.map(u => {
     const colorClass = getAvatarColor(u.name);
+    const statusBadge = !u.is_approved
+      ? '<span class="badge badge-high">대기중</span>'
+      : u.is_admin
+        ? '<span class="badge badge-admin">관리자</span>'
+        : '<span class="badge badge-active">승인됨</span>';
     return `
-    <tr>
+    <tr style="${!u.is_approved ? 'opacity:0.6' : ''}">
       <td>
         <div style="display:flex;align-items:center;gap:10px">
           <div class="avatar avatar-sm ${colorClass}">${u.name.slice(0,1)}</div>
@@ -43,9 +108,10 @@ async function loadUsers() {
       <td>${u.department||'-'}</td>
       <td>${u.position||'-'}</td>
       <td><code style="background:var(--bg);padding:2px 8px;border-radius:4px;font-size:12px">${u.username}</code></td>
-      <td>${u.is_admin ? '<span class="badge badge-admin">관리자</span>' : '<span class="badge badge-pending">일반</span>'}</td>
+      <td>${statusBadge}</td>
       <td style="font-size:12px;color:var(--text-tertiary)">${u.created_at?.split('T')[0]||''}</td>
       <td style="text-align:right">
+        ${!u.is_approved ? `<button class="btn btn-success btn-sm" onclick="approveUser(${u.id}, '${u.name}')">승인</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="openUserForm(${u.id})">수정</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteUser(${u.id}, '${u.name}')">삭제</button>
       </td>
@@ -56,7 +122,7 @@ async function loadUsers() {
 async function openUserForm(userId) {
   let user = null;
   if (userId) {
-    const users = await api.users.list().catch(() => []);
+    const users = await api.users.list(true).catch(() => []);
     user = users.find(u => u.id == userId);
   }
   modal.show(
@@ -111,5 +177,6 @@ async function deleteUser(id, name) {
   if (!confirm(`"${name}" 사용자를 삭제하시겠습니까?`)) return;
   await api.users.delete(id);
   toast('삭제되었습니다');
+  loadPendingUsers();
   loadUsers();
 }

@@ -15,8 +15,12 @@ const api = {
   delete: (url) => api.request('DELETE', url),
 
   users: {
-    list: () => api.get('/api/users'),
+    list: (all) => api.get(`/api/users${all ? '?all=1' : ''}`),
+    pending: () => api.get('/api/users/pending'),
     create: (d) => api.post('/api/users', d),
+    register: (d) => api.post('/api/users/register', d),
+    approve: (id) => api.post(`/api/users/${id}/approve`),
+    reject: (id) => api.post(`/api/users/${id}/reject`),
     update: (id, d) => api.put(`/api/users/${id}`, d),
     delete: (id) => api.delete(`/api/users/${id}`),
     login: (d) => api.post('/api/users/login', d),

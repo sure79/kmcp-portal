@@ -53,6 +53,7 @@ async function initDB() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       is_admin INTEGER DEFAULT 0,
+      is_approved INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -179,13 +180,18 @@ async function initDB() {
     );
   `);
 
+  // 마이그레이션: is_approved 컬럼 추가
+  try { await db.exec('ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 0'); } catch(e) { /* 이미 존재 */ }
+  // 기존 사용자 전부 승인 처리
+  await db.run('UPDATE users SET is_approved = 1 WHERE is_approved = 0 OR is_approved IS NULL');
+
   // 기본 관리자 계정 생성
   const adminExists = await db.get('SELECT id FROM users WHERE username = ?', 'admin');
   if (!adminExists) {
     const hash = bcrypt.hashSync('admin1234', 10);
     await db.run(
-      'INSERT INTO users (name, department, position, username, password, is_admin) VALUES (?, ?, ?, ?, ?, ?)',
-      '관리자', '관리', '관리자', 'admin', hash, 1
+      'INSERT INTO users (name, department, position, username, password, is_admin, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      '관리자', '관리', '관리자', 'admin', hash, 1, 1
     );
     console.log('기본 관리자 계정 생성: admin / admin1234');
   }

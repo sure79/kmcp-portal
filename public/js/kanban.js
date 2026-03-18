@@ -132,6 +132,12 @@ function renderWeeklyBoard() {
   headerHTML += `<div class="wb-week-header wb-special-header parking-header"><div class="wb-week-label">Parking</div><div class="wb-week-month">보류</div></div>`;
   headerHTML += `<div class="wb-week-header wb-special-header done-header"><div class="wb-week-label">Done</div><div class="wb-week-month">완료</div></div>`;
 
+  // 프로젝트 매칭 헬퍼
+  function taskBelongsToProject(t, projId) {
+    if (projId === null) return !t.project_id || t.project_id === null || t.project_id === 0;
+    return t.project_id != null && Number(t.project_id) === Number(projId);
+  }
+
   let bodyHTML = '';
   projectRows.forEach(proj => {
     bodyHTML += `<div class="wb-project-label" style="border-left: 4px solid ${getProjectColor(proj.id)}">
@@ -140,7 +146,7 @@ function renderWeeklyBoard() {
 
     weeks.forEach(w => {
       const cellTasks = allTasks.filter(t =>
-        (proj.id === null ? !t.project_id : t.project_id == proj.id) &&
+        taskBelongsToProject(t, proj.id) &&
         t.target_week === w.key && t.status !== 'done'
       );
       bodyHTML += `
@@ -152,7 +158,7 @@ function renderWeeklyBoard() {
     });
 
     const parkingTasks = allTasks.filter(t =>
-      (proj.id === null ? !t.project_id : t.project_id == proj.id) &&
+      taskBelongsToProject(t, proj.id) &&
       (!t.target_week || t.target_week === '') && t.status !== 'done'
     );
     bodyHTML += `
@@ -163,7 +169,7 @@ function renderWeeklyBoard() {
     `;
 
     const doneTasks = allTasks.filter(t =>
-      (proj.id === null ? !t.project_id : t.project_id == proj.id) && t.status === 'done'
+      taskBelongsToProject(t, proj.id) && t.status === 'done'
     );
     bodyHTML += `
       <div class="wb-cell wb-special-cell done-cell"
@@ -187,12 +193,13 @@ function renderWeeklyBoard() {
         const taskId = parseInt(evt.item.dataset.taskId);
         const targetCell = evt.to;
         const newWeek = targetCell.dataset.week;
-        const newProject = targetCell.dataset.project === 'null' ? null : targetCell.dataset.project;
+        const rawProject = targetCell.dataset.project;
+        const newProject = (rawProject === 'null' || rawProject === '' || rawProject === 'undefined') ? null : parseInt(rawProject);
         const newStatus = targetCell.dataset.status;
 
         try {
           await api.tasks.move(taskId, {
-            target_week: newWeek || '',
+            target_week: newWeek !== undefined ? newWeek : '',
             project_id: newProject,
             status: newStatus === 'done' ? 'done' : 'in_progress',
             sort_order: Array.from(targetCell.children).indexOf(evt.item),
@@ -200,15 +207,11 @@ function renderWeeklyBoard() {
           if (window._socket) {
             window._socket.emit('task:move', { taskId, movedBy: window._currentUser?.name });
           }
-          const task = allTasks.find(t => t.id === taskId);
-          if (task) {
-            task.target_week = newWeek || '';
-            task.project_id = newProject ? parseInt(newProject) : null;
-            task.status = newStatus === 'done' ? 'done' : (task.status === 'done' ? 'in_progress' : task.status);
-          }
+          // 서버에서 최신 데이터를 다시 가져와서 보드 갱신
+          await loadKanban();
         } catch(e) {
           toast('저장 중 오류 발생', 'error');
-          loadKanban();
+          await loadKanban();
         }
       }
     });

@@ -42,6 +42,67 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 });
 
+// 회원가입 폼 전환
+function showRegisterForm() {
+  document.getElementById('login-form').style.display = 'none';
+  document.querySelector('.login-divider').style.display = 'none';
+  document.querySelector('.login-screen .btn-secondary').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
+  document.getElementById('register-error').style.display = 'none';
+  document.getElementById('register-success').style.display = 'none';
+}
+
+function showLoginForm() {
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
+  document.querySelector('.login-divider').style.display = 'flex';
+  document.querySelector('.login-screen .btn-secondary').style.display = 'flex';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// 회원가입
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('register-error');
+  const successEl = document.getElementById('register-success');
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  const name = document.getElementById('reg-name').value.trim();
+  const department = document.getElementById('reg-dept').value.trim();
+  const position = document.getElementById('reg-position').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+
+  if (!name || !username || !password) {
+    errEl.textContent = '이름, 아이디, 비밀번호는 필수입니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (password !== password2) {
+    errEl.textContent = '비밀번호가 일치하지 않습니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (password.length < 4) {
+    errEl.textContent = '비밀번호는 4자 이상이어야 합니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const result = await api.users.register({ name, department, position, username, password });
+    successEl.textContent = result.message || '가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.';
+    successEl.style.display = 'block';
+    // 폼 초기화
+    document.getElementById('register-form').reset();
+  } catch(err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+});
+
 function initApp(user) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';

@@ -69,6 +69,19 @@ body {
 }
 .login-logo h1 { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
 .login-logo p { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+/* 로그인/회원가입 전환 */
+.login-divider {
+  display: flex; align-items: center; gap: 12px; margin: 20px 0;
+  color: var(--text-tertiary); font-size: 13px;
+}
+.login-divider::before, .login-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.success-msg {
+  color: var(--green); font-size: 13px; background: var(--green-light);
+  padding: 10px 14px; border-radius: var(--radius); margin-bottom: 12px;
+  line-height: 1.5;
+}
 .error-msg {
   color: var(--red); font-size: 13px; background: var(--red-light);
   padding: 10px 14px; border-radius: var(--radius); margin-bottom: 12px;
@@ -777,6 +790,20 @@ body {
 .meeting-content-box.minutes {
   border-left: 3px solid var(--blue); min-height: 60px;
 }
+
+/* ===== 승인 대기 ===== */
+.pending-card { border-color: var(--coral); border-left: 4px solid var(--coral); }
+.pending-list { display: flex; flex-direction: column; }
+.pending-item {
+  display: flex; align-items: center; gap: 14px; padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.pending-item:last-child { border-bottom: none; }
+.pending-info { flex: 1; min-width: 0; }
+.pending-name { font-size: 14px; font-weight: 600; }
+.pending-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.pending-date { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.pending-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ===== 반응형 ===== */
 @media (max-width: 1100px) {
