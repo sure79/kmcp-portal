@@ -30,6 +30,7 @@ const api = {
   reports: {
     team: (date) => api.get(`/api/reports/team?date=${date}`),
     list: (p) => api.get(`/api/reports?${new URLSearchParams(p)}`),
+    weeklySummary: (start, end) => api.get(`/api/reports/weekly-summary?start=${start}&end=${end}`),
     save: (d) => api.post('/api/reports', d),
     delete: (id) => api.delete(`/api/reports/${id}`),
   },

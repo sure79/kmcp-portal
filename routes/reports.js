@@ -12,6 +12,61 @@ router.get('/team', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// 주간 종합 보고서
+router.get('/weekly-summary', async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    if (!start || !end) return res.status(400).json({ error: '기간을 지정하세요' });
+
+    // 모든 사용자
+    const users = await db.all('SELECT id, name, department, position FROM users WHERE approved=1 ORDER BY department, name');
+
+    // 해당 기간 보고서
+    const reports = await db.all(
+      `SELECT r.*, u.name, u.department, u.position FROM daily_reports r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.report_date >= ? AND r.report_date <= ?
+       ORDER BY r.report_date ASC, u.name`, start, end);
+
+    // 해당 기간 작업 (칸반)
+    const tasks = await db.all(
+      `SELECT t.*, u.name as assignee_name, p.name as project_name FROM tasks t
+       LEFT JOIN users u ON t.assignee_id = u.id
+       LEFT JOIN projects p ON t.project_id = p.id
+       WHERE t.status != 'done'
+       ORDER BY t.priority DESC, t.title`);
+
+    // 사용자별 그룹화
+    const result = users.map(u => {
+      const userReports = reports.filter(r => r.user_id === u.id);
+      const userTasks = tasks.filter(t => t.assignee_id === u.id);
+      const reportDates = userReports.map(r => r.report_date);
+
+      // 해당 기간 평일 계산
+      const weekdays = [];
+      const d = new Date(start);
+      const endD = new Date(end);
+      while (d <= endD) {
+        if (d.getDay() >= 1 && d.getDay() <= 5) weekdays.push(d.toISOString().split('T')[0]);
+        d.setDate(d.getDate() + 1);
+      }
+      const missingDates = weekdays.filter(wd => !reportDates.includes(wd));
+
+      return {
+        ...u,
+        reports: userReports,
+        tasks: userTasks,
+        reportCount: userReports.length,
+        totalWeekdays: weekdays.length,
+        missingDates,
+        missingCount: missingDates.length,
+      };
+    });
+
+    res.json(result);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/', async (req, res) => {
   try {
     const { user_id, start, end } = req.query;

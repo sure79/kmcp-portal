@@ -1015,6 +1015,102 @@ body {
   justify-content: center; font-weight: 700; font-size: 10px; color: white;
 }
 
+/* ===== 주간 종합 보고서 ===== */
+.wr-week-label {
+  font-size: 16px; font-weight: 700; min-width: 140px; text-align: center;
+  padding: 6px 16px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.wr-summary {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;
+}
+.wr-stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px; text-align: center;
+}
+.wr-stat-value { font-size: 28px; font-weight: 800; color: var(--text); }
+.wr-stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.wr-stat-good .wr-stat-value { color: var(--green); }
+.wr-stat-warn .wr-stat-value { color: var(--coral); }
+
+/* 제출 현황 매트릭스 */
+.wr-matrix { overflow-x: auto; }
+.wr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wr-table th, .wr-table td { padding: 10px 8px; border-bottom: 1px solid var(--border-light); }
+.wr-table thead th { background: var(--bg); font-weight: 700; color: var(--text-secondary); font-size: 12px; }
+.wr-th-name { text-align: left; min-width: 100px; }
+.wr-th-dept { text-align: left; min-width: 70px; }
+.wr-th-day { min-width: 60px; }
+.wr-th-rate { min-width: 60px; }
+.wr-td-name { display: flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
+.wr-td-dept { color: var(--text-secondary); font-size: 12px; }
+.wr-td-status { text-align: center; font-size: 16px; cursor: default; }
+.wr-td-status.submitted { color: var(--green); cursor: pointer; font-weight: 700; }
+.wr-td-status.submitted:hover { background: var(--green-light); border-radius: 4px; }
+.wr-td-status.missing { color: var(--red); font-weight: 700; }
+.wr-td-status.future { color: var(--text-tertiary); }
+.wr-td-rate { text-align: center; }
+.wr-rate-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;
+}
+.wr-rate-badge.good { background: var(--green-light); color: var(--green); }
+.wr-rate-badge.warn { background: var(--yellow-light); color: #B8860B; }
+.wr-rate-badge.bad { background: var(--red-light); color: var(--red); }
+
+/* 개인별 상세 */
+.wr-person-section { border-bottom: 1px solid var(--border-light); }
+.wr-person-section:last-child { border-bottom: none; }
+.wr-person-header {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  cursor: pointer; transition: background var(--transition);
+}
+.wr-person-header:hover { background: var(--surface-hover); }
+.wr-person-info { flex: 1; }
+.wr-person-info strong { font-size: 14px; }
+.wr-person-info .text-muted { font-size: 12px; margin-left: 6px; }
+.wr-person-stats { display: flex; gap: 6px; }
+.wr-chevron { flex-shrink: 0; transition: transform 0.2s; color: var(--text-tertiary); }
+.wr-person-section.collapsed .wr-person-body { display: none; }
+.wr-person-section.collapsed .wr-chevron { transform: rotate(-90deg); }
+
+.wr-person-body { padding: 0 16px 16px 52px; }
+.wr-daily-list { display: flex; flex-direction: column; gap: 2px; }
+.wr-daily-item {
+  display: flex; gap: 16px; padding: 10px 12px;
+  border-radius: var(--radius); border-left: 3px solid var(--border);
+  background: var(--bg);
+}
+.wr-daily-date {
+  flex-shrink: 0; width: 48px; text-align: center;
+}
+.wr-day-name { font-weight: 800; font-size: 14px; color: var(--text); display: block; }
+.wr-day-date { font-size: 11px; color: var(--text-tertiary); }
+.wr-daily-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.wr-work-row { display: flex; gap: 8px; font-size: 13px; line-height: 1.5; }
+.wr-work-label {
+  flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 6px;
+  border-radius: 3px; background: var(--green-light); color: var(--green);
+  height: fit-content; margin-top: 2px;
+}
+.wr-work-label.plan { background: var(--blue-light); color: var(--blue); }
+.wr-work-label.special { background: var(--coral-light); color: var(--coral); }
+.wr-work-label.safety { background: var(--red-light); color: var(--red); }
+.wr-work-text { flex: 1; color: var(--text); }
+.wr-no-report { padding: 16px; color: var(--text-tertiary); font-size: 13px; text-align: center; }
+
+/* 진행중 작업 */
+.wr-tasks-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+.wr-tasks-title { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; }
+.wr-tasks-list { display: flex; flex-direction: column; gap: 4px; }
+.wr-task-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  font-size: 13px; border-radius: var(--radius);
+}
+.wr-task-item:hover { background: var(--surface-hover); }
+.wr-task-title { font-weight: 500; }
+
+.loading-state { padding: 48px; text-align: center; color: var(--text-tertiary); }
+
 /* ===== 반응형 ===== */
 @media (max-width: 1100px) {
   .weekly-board-wrapper { font-size: 12px; }

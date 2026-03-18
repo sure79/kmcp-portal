@@ -14,6 +14,7 @@ function getAvatarColor(name) {
 const pageRenderers = {
   dashboard: renderDashboard,
   team: renderTeam,
+  'weekly-report': renderWeeklyReport,
   reports: renderReports,
   calendar: renderCalendar,
   kanban: renderKanban,
