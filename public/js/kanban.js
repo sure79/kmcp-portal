@@ -341,6 +341,21 @@ function renderWeeklyBoard() {
         const newProject = (rawProject === 'null' || rawProject === '' || rawProject === 'undefined') ? null : parseInt(rawProject);
         const newStatus = targetCell.dataset.status;
 
+        // 로컬 데이터 즉시 업데이트 (리렌더링 방지)
+        const task = allTasks.find(t => t.id === taskId);
+        if (task) {
+          task.target_week = newWeek !== undefined ? newWeek : '';
+          task.project_id = newProject;
+          task.status = newStatus === 'done' ? 'done' : 'in_progress';
+        }
+
+        // Done 셀로 이동 시 투명도 적용
+        if (newStatus === 'done') {
+          evt.item.style.opacity = '0.55';
+        } else {
+          evt.item.style.opacity = '';
+        }
+
         try {
           await api.tasks.move(taskId, {
             target_week: newWeek !== undefined ? newWeek : '',
@@ -351,9 +366,10 @@ function renderWeeklyBoard() {
           if (window._socket) {
             window._socket.emit('task:move', { taskId, movedBy: window._currentUser?.name });
           }
-          await loadKanban();
+          // 성공 시 리렌더링 하지 않음 (DOM은 이미 SortableJS가 이동시킴)
         } catch(e) {
           toast('저장 중 오류 발생', 'error');
+          // 실패 시에만 전체 리렌더링으로 원복
           await loadKanban();
         }
       }
