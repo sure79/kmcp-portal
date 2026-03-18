@@ -15,6 +15,7 @@ const pageRenderers = {
   dashboard: renderDashboard,
   team: renderTeam,
   reports: renderReports,
+  calendar: renderCalendar,
   kanban: renderKanban,
   projects: renderProjects,
   meetings: renderMeetings,

@@ -791,6 +791,79 @@ body {
   border-left: 3px solid var(--blue); min-height: 60px;
 }
 
+/* ===== 달력 ===== */
+.cal-nav {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+}
+.cal-title { font-size: 20px; font-weight: 700; min-width: 140px; text-align: center; }
+.cal-legend {
+  display: flex; gap: 14px; font-size: 12px; color: var(--text-secondary);
+}
+.cal-legend-item { display: flex; align-items: center; gap: 5px; }
+.cal-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.cal-filter select {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: inherit; background: var(--surface);
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--surface);
+}
+.cal-header {
+  padding: 10px; text-align: center; font-size: 12px; font-weight: 700;
+  color: var(--text-secondary); background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.cal-header:nth-child(6) { color: var(--blue); }
+.cal-header:nth-child(7) { color: var(--coral); }
+.cal-day {
+  min-height: 110px; padding: 4px 6px; border-bottom: 1px solid var(--border-light);
+  border-right: 1px solid var(--border-light); cursor: pointer;
+  transition: background var(--transition); position: relative;
+}
+.cal-day:hover { background: var(--surface-hover); }
+.cal-day.today { background: #F0F7FF; }
+.cal-day.weekend { background: var(--bg); }
+.cal-day.other-month { background: var(--bg); opacity: 0.4; }
+.cal-day-num {
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 4px; padding: 2px 6px;
+}
+.cal-day-num.today-num {
+  background: var(--coral); color: white; border-radius: 50%;
+  width: 26px; height: 26px; display: flex; align-items: center;
+  justify-content: center; padding: 0;
+}
+.cal-day-events { display: flex; flex-direction: column; gap: 2px; }
+.cal-event {
+  font-size: 11px; padding: 2px 6px; border-radius: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.cal-event.task { background: #EDF1FC; color: #4573D2; }
+.cal-event.task.due { background: #FDE8E8; color: var(--red); }
+.cal-event.report { background: #E8F5EE; color: #5DA283; }
+.cal-event.meeting { background: #F3EDFF; color: #AA62E3; font-weight: 600; }
+.cal-event-more { font-size: 10px; color: var(--text-tertiary); padding: 1px 6px; }
+
+/* 날짜 상세 모달 */
+.day-section { margin-bottom: 20px; }
+.day-section-title {
+  font-size: 13px; font-weight: 700; color: var(--text-secondary);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border-light);
+}
+.day-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius); cursor: pointer; transition: background var(--transition);
+  font-size: 13px;
+}
+.day-item:hover { background: var(--surface-hover); }
+.day-item .text-muted { font-size: 12px; }
+
 /* ===== 승인 대기 ===== */
 .pending-card { border-color: var(--coral); border-left: 4px solid var(--coral); }
 .pending-list { display: flex; flex-direction: column; }
