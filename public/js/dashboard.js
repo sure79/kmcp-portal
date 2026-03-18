@@ -6,13 +6,14 @@ async function renderDashboard() {
   const userName = user?.name || '';
   const userId = user?.id;
 
-  const [allReports, tasks, meetings, notices, myReports, lunchPoll] = await Promise.all([
+  const [allReports, tasks, meetings, notices, myReports, lunchPoll, projects] = await Promise.all([
     api.reports.team(today).catch(() => []),
     api.tasks.list().catch(() => []),
     api.meetings.list({}).catch(() => []),
     api.notices.list().catch(() => []),
     userId ? api.reports.list({ user_id: userId, start: getWeekStartDate(), end: today }).catch(() => []) : [],
     api.lunch.get(today).catch(() => null),
+    api.projects.list().catch(() => []),
   ]);
 
   const isFriday = dayOfWeek === 5;
@@ -176,6 +177,51 @@ async function renderDashboard() {
         ` : ''}
       </div>
     </div>
+
+    <!-- 프로젝트 현황 -->
+    ${projects.filter(p => p.status === 'active').length > 0 ? `
+    <div class="card mt-16">
+      <div class="card-header">
+        <div class="card-title">프로젝트 현황</div>
+        <button class="btn btn-ghost btn-sm" onclick="navigateTo('projects')">전체 보기 →</button>
+      </div>
+      <div class="project-dashboard-grid">
+        ${projects.filter(p => p.status === 'active').map(p => {
+          const progress = p.auto_progress || p.progress || 0;
+          const daysLeft = p.end_date ? Math.ceil((new Date(p.end_date) - new Date()) / 86400000) : null;
+          const urgency = daysLeft !== null && daysLeft <= 14 ? (daysLeft <= 0 ? 'overdue' : 'urgent') : 'normal';
+          const projTasks = tasks.filter(t => t.project_id == p.id);
+          const doneTasks = projTasks.filter(t => t.status === 'done').length;
+          const inProgress = projTasks.filter(t => t.status === 'in_progress').length;
+          return `
+            <div class="proj-dash-card ${urgency}" onclick="navigateTo('projects');setTimeout(()=>viewProject(${p.id}),300)">
+              <div class="proj-dash-header">
+                <div class="proj-dash-name">${p.name}</div>
+                ${daysLeft !== null ? `
+                  <span class="proj-dash-dday ${urgency}">
+                    ${daysLeft <= 0 ? 'D+'+Math.abs(daysLeft) : 'D-'+daysLeft}
+                  </span>
+                ` : ''}
+              </div>
+              <div class="proj-dash-desc">${(p.description || '').substring(0, 60)}</div>
+              <div class="proj-dash-progress">
+                <div class="progress-bar" style="height:6px"><div class="progress-fill" style="width:${progress}%"></div></div>
+                <span class="proj-dash-pct">${progress}%</span>
+              </div>
+              <div class="proj-dash-stats">
+                <span>작업 ${doneTasks}/${projTasks.length}</span>
+                <span>진행중 ${inProgress}</span>
+                ${p.end_date ? `<span>마감 ${p.end_date.slice(5)}</span>` : ''}
+              </div>
+              <div class="proj-dash-members">
+                ${(p.members||[]).slice(0, 5).map(m => `<span class="avatar avatar-xs ${getAvatarColor(m.name)}" title="${m.name}">${m.name.slice(0,1)}</span>`).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+    ` : ''}
 
     <!-- 점심 투표 (목/금 또는 투표 있을때) -->
     ${(isFriday || isThursday || lunchPoll) ? `

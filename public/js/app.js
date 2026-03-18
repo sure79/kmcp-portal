@@ -149,8 +149,58 @@ function initApp(user) {
     toast(`${data.name||'누군가'}님이 점심 투표를 시작했습니다!`, 'info');
   });
 
+  // 알림 로드
+  loadNotifications();
+  setInterval(loadNotifications, 5 * 60 * 1000); // 5분마다 갱신
+
   navigateTo('dashboard');
 }
+
+// ===== 알림 시스템 =====
+async function loadNotifications() {
+  try {
+    const notifs = await api.notifications.list();
+    const badge = document.getElementById('notif-badge');
+    if (notifs.length > 0) {
+      badge.textContent = notifs.length;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+    window._notifications = notifs;
+  } catch (e) {}
+}
+
+function toggleNotifications() {
+  const dd = document.getElementById('notif-dropdown');
+  const isOpen = dd.style.display !== 'none';
+  if (isOpen) { closeNotifications(); return; }
+
+  const notifs = window._notifications || [];
+  const list = document.getElementById('notif-list');
+
+  if (notifs.length === 0) {
+    list.innerHTML = '<div class="notif-empty">새로운 알림이 없습니다</div>';
+  } else {
+    list.innerHTML = notifs.map(n => `
+      <div class="notif-item notif-${n.type}" onclick="closeNotifications();navigateTo('${n.action}')">
+        <div class="notif-icon">${n.icon}</div>
+        <div class="notif-content">
+          <div class="notif-title">${n.title}</div>
+          <div class="notif-msg">${n.message}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  dd.style.display = 'block';
+}
+
+function closeNotifications() {
+  document.getElementById('notif-dropdown').style.display = 'none';
+}
+
+// ===== 글로벌 검색 =====
+let searchTimeout = null;
 
 async function navigateTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -192,6 +242,107 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-password').value = '';
 });
+
+// 글로벌 검색 이벤트
+document.getElementById('global-search').addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const q = e.target.value.trim();
+  if (q.length < 2) { document.getElementById('search-dropdown').style.display = 'none'; return; }
+  searchTimeout = setTimeout(async () => {
+    try {
+      const results = await api.search(q);
+      renderSearchResults(results, q);
+    } catch (e) {}
+  }, 300);
+});
+
+document.getElementById('global-search').addEventListener('focus', (e) => {
+  if (e.target.value.trim().length >= 2) {
+    document.getElementById('search-dropdown').style.display = 'block';
+  }
+});
+
+// 바깥 클릭 시 검색/알림 닫기
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.topbar-search') && !e.target.closest('.search-dropdown')) {
+    document.getElementById('search-dropdown').style.display = 'none';
+  }
+  if (!e.target.closest('.notif-wrapper')) {
+    document.getElementById('notif-dropdown').style.display = 'none';
+  }
+});
+
+function renderSearchResults(results, query) {
+  const dd = document.getElementById('search-dropdown');
+  const container = document.getElementById('search-results');
+  const total = (results.tasks?.length||0) + (results.reports?.length||0) + (results.meetings?.length||0) + (results.projects?.length||0) + (results.notices?.length||0);
+
+  if (total === 0) {
+    container.innerHTML = '<div class="search-empty">검색 결과가 없습니다</div>';
+    dd.style.display = 'block';
+    return;
+  }
+
+  const highlight = (text) => {
+    if (!text) return '';
+    const safe = text.replace(/</g, '&lt;').substring(0, 100);
+    return safe.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '<mark>$&</mark>');
+  };
+
+  let html = '';
+  if (results.tasks?.length) {
+    html += `<div class="search-section-title">작업 (${results.tasks.length})</div>`;
+    html += results.tasks.map(t => `
+      <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('kanban');setTimeout(()=>openTaskDetail(${t.id}),500)">
+        <span class="search-item-icon">📌</span>
+        <div><div class="search-item-title">${highlight(t.title)}</div>
+        <div class="search-item-meta">${t.project_name||'미분류'} · ${t.assignee_name||'미배정'}</div></div>
+      </div>
+    `).join('');
+  }
+  if (results.projects?.length) {
+    html += `<div class="search-section-title">프로젝트 (${results.projects.length})</div>`;
+    html += results.projects.map(p => `
+      <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('projects');setTimeout(()=>viewProject(${p.id}),500)">
+        <span class="search-item-icon">📁</span>
+        <div><div class="search-item-title">${highlight(p.name)}</div>
+        <div class="search-item-meta">진행률 ${p.progress||0}%</div></div>
+      </div>
+    `).join('');
+  }
+  if (results.meetings?.length) {
+    html += `<div class="search-section-title">회의 (${results.meetings.length})</div>`;
+    html += results.meetings.map(m => `
+      <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('meetings')">
+        <span class="search-item-icon">${m.type==='weekly'?'📋':'🔧'}</span>
+        <div><div class="search-item-title">${highlight(m.title || (m.type==='weekly'?'주간회의':'기술회의'))}</div>
+        <div class="search-item-meta">${m.meeting_date}</div></div>
+      </div>
+    `).join('');
+  }
+  if (results.reports?.length) {
+    html += `<div class="search-section-title">보고서 (${results.reports.length})</div>`;
+    html += results.reports.map(r => `
+      <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('reports')">
+        <span class="search-item-icon">📝</span>
+        <div><div class="search-item-title">${r.name} - ${r.report_date}</div>
+        <div class="search-item-meta">${highlight((r.work_done||'').split('\n')[0])}</div></div>
+      </div>
+    `).join('');
+  }
+  if (results.notices?.length) {
+    html += `<div class="search-section-title">공지 (${results.notices.length})</div>`;
+    html += results.notices.map(n => `
+      <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('notices')">
+        <span class="search-item-icon">📢</span>
+        <div><div class="search-item-title">${highlight(n.title)}</div></div>
+      </div>
+    `).join('');
+  }
+
+  container.innerHTML = html;
+  dd.style.display = 'block';
+}
 
 // 세션 복구 시도
 (async () => {

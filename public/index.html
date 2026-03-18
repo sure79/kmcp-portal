@@ -160,10 +160,28 @@
       </div>
       <div class="topbar-actions">
         <div class="topbar-today" id="topbar-today"></div>
+        <!-- 알림 벨 -->
+        <div class="notif-wrapper" id="notif-wrapper">
+          <button class="btn-icon-ghost notif-bell" id="notif-bell" onclick="toggleNotifications()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+          </button>
+          <div class="notif-dropdown" id="notif-dropdown" style="display:none">
+            <div class="notif-header">
+              <span>알림</span>
+              <button class="btn btn-ghost btn-sm" onclick="closeNotifications()">닫기</button>
+            </div>
+            <div class="notif-list" id="notif-list"></div>
+          </div>
+        </div>
         <button class="btn btn-coral" onclick="navigateTo('reports');setTimeout(()=>openReportForm(),300)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           보고서 작성
         </button>
+      </div>
+      <!-- 검색 결과 드롭다운 -->
+      <div class="search-dropdown" id="search-dropdown" style="display:none">
+        <div class="search-results" id="search-results"></div>
       </div>
     </header>
 

@@ -73,4 +73,8 @@ const api = {
     vote: (d) => api.post('/api/lunch/vote', d),
     delete: (id) => api.delete(`/api/lunch/${id}`),
   },
+  notifications: {
+    list: () => api.get('/api/notifications'),
+  },
+  search: (q) => api.get(`/api/search?q=${encodeURIComponent(q)}`),
 };

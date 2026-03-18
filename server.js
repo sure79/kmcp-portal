@@ -29,6 +29,31 @@ app.use('/api/projects', require('./routes/projects'));
 app.use('/api/notices', require('./routes/notices'));
 app.use('/api/status', require('./routes/status'));
 app.use('/api/lunch', require('./routes/lunch'));
+app.use('/api/notifications', require('./routes/notifications'));
+
+// 글로벌 검색 API
+app.get('/api/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 2) return res.json({ tasks: [], reports: [], meetings: [], projects: [], notices: [] });
+    const like = `%${q}%`;
+    const [tasks, reports, meetings, projects, notices] = await Promise.all([
+      db.all(`SELECT t.id, t.title, t.description, t.status, u.name as assignee_name, p.name as project_name
+              FROM tasks t LEFT JOIN users u ON t.assignee_id=u.id LEFT JOIN projects p ON t.project_id=p.id
+              WHERE t.title LIKE ? OR t.description LIKE ? LIMIT 10`, like, like),
+      db.all(`SELECT r.id, r.report_date, r.work_done, u.name FROM daily_reports r
+              LEFT JOIN users u ON r.user_id=u.id
+              WHERE r.work_done LIKE ? OR r.work_planned LIKE ? OR r.special_notes LIKE ? LIMIT 10`, like, like, like),
+      db.all(`SELECT id, title, type, meeting_date, agenda, minutes FROM meetings
+              WHERE title LIKE ? OR agenda LIKE ? OR minutes LIKE ? OR decisions LIKE ? LIMIT 10`, like, like, like, like),
+      db.all(`SELECT id, name, description, status, progress FROM projects
+              WHERE name LIKE ? OR description LIKE ? LIMIT 10`, like, like),
+      db.all(`SELECT id, title, content FROM notices
+              WHERE title LIKE ? OR content LIKE ? LIMIT 10`, like, like),
+    ]);
+    res.json({ tasks, reports, meetings, projects, notices });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // SPA fallback
 app.get('*', (req, res) => {
