@@ -25,6 +25,7 @@ router.post('/', async (req, res) => {
       'INSERT INTO suggestions (title, content, category, author_id, is_anonymous) VALUES (?,?,?,?,?)',
       title, content || '', category || 'general', author_id, is_anonymous ? 1 : 0
     );
+    req.logAndNotify({ type: 'suggestion', action: 'create', title: `새 건의: ${title}`, message: '', actor_id: is_anonymous ? 0 : (author_id || 0), actor_name: is_anonymous ? '익명' : (req.session?.user?.name || ''), target_page: 'suggestions', target_id: result.lastInsertRowid });
     res.json({ id: result.lastInsertRowid });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

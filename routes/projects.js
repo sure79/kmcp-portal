@@ -54,6 +54,7 @@ router.post('/', async (req, res) => {
         await db.run('INSERT OR IGNORE INTO project_members (project_id, user_id) VALUES (?, ?)', pid, uid);
       }
     }
+    req.logAndNotify({ type: 'project', action: 'create', title: `새 프로젝트: ${name}`, message: (description||'').substring(0,100), actor_id: created_by || 0, actor_name: req.session?.user?.name || '', target_page: 'projects', target_id: pid });
     res.json({ id: pid });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

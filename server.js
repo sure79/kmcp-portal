@@ -20,82 +20,19 @@ app.use(session({
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// io 객체를 라우트에서 사용할 수 있도록 전달
+// io + 활동로그 헬퍼를 라우트에서 사용할 수 있도록 전달
 const { logActivity, emitNotification } = require('./utils/activity');
 app.use((req, res, next) => {
   req.io = io;
-  // POST 활동 자동 로그 (응답 후)
-  if (req.method === 'POST' || req.method === 'PUT') {
-    const origJson = res.json.bind(res);
-    res.json = function(data) {
-      // 성공 응답만 로그
-      if (res.statusCode < 400 && data && !data.error) {
-        autoLogActivity(req, data).catch(err => console.error('활동 로그 오류:', err.message));
-      }
-      return origJson(data);
-    };
-  }
+  // 라우트에서 req.logAndNotify(data) 호출하면 활동 로그 + 실시간 알림
+  req.logAndNotify = async (data) => {
+    try {
+      await logActivity(data);
+      emitNotification(io, data);
+    } catch(e) { console.error('알림 오류:', e.message); }
+  };
   next();
 });
-
-// 자동 활동 로그 기록
-async function autoLogActivity(req, resData) {
-  const url = req.originalUrl;
-  const body = req.body || {};
-  const session = req.session?.user;
-  const actorId = session?.id || body.author_id || body.user_id || body.created_by || null;
-  const actorName = session?.name || '';
-
-  let log = null;
-
-  // 보고서 작성/수정
-  if (url === '/api/reports' && req.method === 'POST') {
-    const userName = actorName || (await db.get('SELECT name FROM users WHERE id=?', body.user_id))?.name || '';
-    log = { type: 'report', action: resData.updated ? 'update' : 'create',
-      title: `${userName}님이 업무보고 ${resData.updated ? '수정' : '제출'}`,
-      message: `${body.report_date} 업무보고서`, actor_id: body.user_id, actor_name: userName, target_page: 'reports', target_id: resData.id };
-  }
-  // 작업 생성
-  else if (url === '/api/tasks' && req.method === 'POST') {
-    log = { type: 'task', action: 'create', title: `새 작업: ${body.title}`,
-      message: body.description?.substring(0, 100) || '', actor_id: actorId, actor_name: actorName, target_page: 'kanban', target_id: resData.id };
-  }
-  // 회의 생성
-  else if (url === '/api/meetings' && req.method === 'POST') {
-    log = { type: 'meeting', action: 'create', title: `새 회의: ${body.title || (body.type === 'weekly' ? '주간회의' : '기술회의')}`,
-      message: `${body.meeting_date} ${body.start_time || ''}`, actor_id: actorId, actor_name: actorName, target_page: 'meetings', target_id: resData.id };
-  }
-  // 공지사항 생성
-  else if (url === '/api/notices' && req.method === 'POST') {
-    log = { type: 'notice', action: 'create', title: `새 공지: ${body.title}`,
-      message: '', actor_id: actorId, actor_name: actorName, target_page: 'notices', target_id: resData.id };
-  }
-  // 프로젝트 생성
-  else if (url === '/api/projects' && req.method === 'POST') {
-    log = { type: 'project', action: 'create', title: `새 프로젝트: ${body.name}`,
-      message: body.description?.substring(0, 100) || '', actor_id: actorId, actor_name: actorName, target_page: 'projects', target_id: resData.id };
-  }
-  // 건의사항 생성
-  else if (url === '/api/suggestions' && req.method === 'POST') {
-    log = { type: 'suggestion', action: 'create', title: `새 건의: ${body.title}`,
-      message: '', actor_id: body.is_anonymous ? null : actorId, actor_name: body.is_anonymous ? '익명' : actorName, target_page: 'suggestions', target_id: resData.id };
-  }
-  // 투표 생성
-  else if (url === '/api/polls' && req.method === 'POST') {
-    log = { type: 'poll', action: 'create', title: `새 투표: ${body.title}`,
-      message: `${body.options?.length || 0}개 선택지`, actor_id: actorId, actor_name: actorName, target_page: 'polls', target_id: resData.id };
-  }
-  // 건의사항 답변
-  else if (url.match(/\/api\/suggestions\/\d+\/reply/) && req.method === 'POST') {
-    log = { type: 'suggestion', action: 'reply', title: `건의사항 답변 등록`,
-      message: body.status || '', actor_id: actorId, actor_name: actorName, target_page: 'suggestions' };
-  }
-
-  if (log) {
-    await logActivity(log);
-    emitNotification(io, log);
-  }
-}
 
 // API 라우터
 app.use('/api/users', require('./routes/users'));

@@ -44,6 +44,7 @@ router.post('/', async (req, res) => {
         await db.run('INSERT OR IGNORE INTO meeting_attendees (meeting_id, user_id) VALUES (?, ?)', meetingId, uid);
       }
     }
+    req.logAndNotify({ type: 'meeting', action: 'create', title: `새 회의: ${title || (type === 'weekly' ? '주간회의' : '기술회의')}`, message: `${meeting_date} ${start_time||''}`, actor_id: created_by || 0, actor_name: req.session?.user?.name || '', target_page: 'meetings', target_id: meetingId });
     res.json({ id: meetingId });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
