@@ -76,6 +76,8 @@ const api = {
   },
   notifications: {
     list: () => api.get('/api/notifications'),
+    history: (p) => api.get(`/api/notifications/history?${new URLSearchParams(p||{})}`),
+    readAll: () => api.post('/api/notifications/read-all'),
   },
   suggestions: {
     list: () => api.get('/api/suggestions'),

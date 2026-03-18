@@ -953,6 +953,7 @@ body {
 .notif-item.notif-danger { border-left: 3px solid var(--red); }
 .notif-item.notif-warning { border-left: 3px solid var(--yellow); }
 .notif-item.notif-info { border-left: 3px solid var(--blue); }
+.notif-item.notif-unread { background: var(--blue-light); }
 .notif-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
 .notif-content { flex: 1; min-width: 0; }
 .notif-title { font-size: 13px; font-weight: 600; color: var(--text); }

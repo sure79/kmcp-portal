@@ -235,6 +235,24 @@ async function initDB() {
     );
   `);
 
+  // 알림 히스토리 테이블
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      action TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT DEFAULT '',
+      actor_id INTEGER,
+      actor_name TEXT DEFAULT '',
+      target_page TEXT DEFAULT '',
+      target_id INTEGER,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (actor_id) REFERENCES users(id)
+    );
+  `);
+
   // 마이그레이션: is_approved 컬럼 추가
   try { await db.exec('ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 0'); } catch(e) { /* 이미 존재 */ }
   // 기존 사용자 전부 승인 처리

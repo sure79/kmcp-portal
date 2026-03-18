@@ -138,4 +138,35 @@ router.get('/', async (req, res) => {
   }
 });
 
+// 활동 히스토리 조회
+router.get('/history', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    const type = req.query.type || '';
+
+    let sql = 'SELECT * FROM activity_log';
+    const params = [];
+    if (type) { sql += ' WHERE type = ?'; params.push(type); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const logs = await db.all(sql, ...params);
+    const total = await db.get(
+      type ? 'SELECT COUNT(*) as cnt FROM activity_log WHERE type=?' : 'SELECT COUNT(*) as cnt FROM activity_log',
+      ...(type ? [type] : [])
+    );
+
+    res.json({ logs, total: total?.cnt || 0 });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// 활동 읽음 처리
+router.post('/read-all', async (req, res) => {
+  try {
+    await db.run('UPDATE activity_log SET is_read = 1 WHERE is_read = 0');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

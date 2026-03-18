@@ -152,9 +152,26 @@ function initApp(user) {
     toast(`${data.name||'누군가'}님이 점심 투표를 시작했습니다!`, 'info');
   });
 
+  // 실시간 활동 알림 수신
+  window._socket.on('notification', (data) => {
+    // 토스트 알림 표시
+    const icons = { report: '📝', task: '📌', meeting: '📋', notice: '📢', project: '📁', suggestion: '💡', poll: '📊' };
+    const icon = icons[data.type] || '🔔';
+    toast(`${icon} ${data.title}`, 'info');
+
+    // 알림 배지 업데이트
+    loadNotifications();
+
+    // 현재 보고 있는 페이지면 자동 새로고침
+    if (data.target_page && currentPage === data.target_page) {
+      const renderer = pageRenderers[currentPage];
+      if (renderer) renderer();
+    }
+  });
+
   // 알림 로드
   loadNotifications();
-  setInterval(loadNotifications, 5 * 60 * 1000); // 5분마다 갱신
+  setInterval(loadNotifications, 3 * 60 * 1000); // 3분마다 갱신
 
   navigateTo('dashboard');
 }
@@ -174,28 +191,84 @@ async function loadNotifications() {
   } catch (e) {}
 }
 
+let notifTab = 'alerts';
+
 function toggleNotifications() {
   const dd = document.getElementById('notif-dropdown');
   const isOpen = dd.style.display !== 'none';
   if (isOpen) { closeNotifications(); return; }
-
-  const notifs = window._notifications || [];
-  const list = document.getElementById('notif-list');
-
-  if (notifs.length === 0) {
-    list.innerHTML = '<div class="notif-empty">새로운 알림이 없습니다</div>';
-  } else {
-    list.innerHTML = notifs.map(n => `
-      <div class="notif-item notif-${n.type}" onclick="closeNotifications();navigateTo('${n.action}')">
-        <div class="notif-icon">${n.icon}</div>
-        <div class="notif-content">
-          <div class="notif-title">${n.title}</div>
-          <div class="notif-msg">${n.message}</div>
-        </div>
-      </div>
-    `).join('');
-  }
+  notifTab = 'alerts';
+  renderNotifDropdown();
   dd.style.display = 'block';
+}
+
+async function renderNotifDropdown() {
+  const list = document.getElementById('notif-list');
+  const header = document.querySelector('.notif-header');
+
+  // 탭 헤더 (알림/히스토리)
+  header.innerHTML = `
+    <div style="display:flex;gap:0">
+      <button class="btn btn-sm ${notifTab === 'alerts' ? 'btn-secondary' : 'btn-ghost'}" onclick="notifTab='alerts';renderNotifDropdown()" style="border-radius:6px 0 0 6px">알림</button>
+      <button class="btn btn-sm ${notifTab === 'history' ? 'btn-secondary' : 'btn-ghost'}" onclick="notifTab='history';renderNotifDropdown()" style="border-radius:0 6px 6px 0">활동 기록</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeNotifications()">닫기</button>
+  `;
+
+  if (notifTab === 'alerts') {
+    const notifs = window._notifications || [];
+    if (notifs.length === 0) {
+      list.innerHTML = '<div class="notif-empty">새로운 알림이 없습니다</div>';
+    } else {
+      list.innerHTML = notifs.map(n => `
+        <div class="notif-item notif-${n.type}" onclick="closeNotifications();navigateTo('${n.action}')">
+          <div class="notif-icon">${n.icon}</div>
+          <div class="notif-content">
+            <div class="notif-title">${n.title}</div>
+            <div class="notif-msg">${n.message}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } else {
+    // 히스토리 탭
+    list.innerHTML = '<div class="notif-empty">불러오는 중...</div>';
+    try {
+      const { logs } = await api.notifications.history({ limit: 30 });
+      if (!logs || logs.length === 0) {
+        list.innerHTML = '<div class="notif-empty">활동 기록이 없습니다</div>';
+        return;
+      }
+      const icons = { report: '📝', task: '📌', meeting: '📋', notice: '📢', project: '📁', suggestion: '💡', poll: '📊' };
+      list.innerHTML = logs.map(l => {
+        const icon = icons[l.type] || '🔔';
+        const time = getActivityTimeAgo(l.created_at);
+        return `
+          <div class="notif-item ${l.is_read ? '' : 'notif-unread'}" onclick="closeNotifications();${l.target_page ? `navigateTo('${l.target_page}')` : ''}">
+            <div class="notif-icon">${icon}</div>
+            <div class="notif-content">
+              <div class="notif-title">${l.title}</div>
+              <div class="notif-msg">${l.actor_name ? l.actor_name + ' · ' : ''}${time}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      // 읽음 처리
+      api.notifications.readAll().catch(() => {});
+    } catch(e) {
+      list.innerHTML = '<div class="notif-empty">불러오기 실패</div>';
+    }
+  }
+}
+
+function getActivityTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if (diff < 60) return '방금';
+  if (diff < 3600) return `${Math.floor(diff/60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`;
+  if (diff < 604800) return `${Math.floor(diff/86400)}일 전`;
+  return dateStr.split('T')[0];
 }
 
 function closeNotifications() {
