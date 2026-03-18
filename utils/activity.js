@@ -5,10 +5,11 @@ async function logActivity({ type, action, title, message, actor_id, actor_name,
   try {
     await db.run(
       'INSERT INTO activity_log (type, action, title, message, actor_id, actor_name, target_page, target_id) VALUES (?,?,?,?,?,?,?,?)',
-      type || '', action || '', title || '', message || '', actor_id || null, actor_name || '', target_page || '', target_id || null
+      type || '', action || '', title || '', message || '', actor_id || 0, actor_name || '', target_page || '', target_id || 0
     );
+    console.log(`활동 로그: [${type}] ${title}`);
   } catch(e) {
-    console.error('활동 로그 기록 실패:', e.message);
+    console.error('활동 로그 기록 실패:', e.message, e.stack);
   }
 }
 

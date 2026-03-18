@@ -287,7 +287,7 @@ function printWeeklyReport() {
       @media print { body { padding: 0; } }
     </style>
     </head><body>
-      <h2>KMCP 주간 종합 업무보고서</h2>
+      <h2>KMCP 연구소 주간 종합 업무보고서</h2>
       <div class="period">${range.start} ~ ${range.end}</div>
       ${content.innerHTML}
       <script>window.print();</script>

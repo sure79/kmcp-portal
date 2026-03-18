@@ -30,7 +30,7 @@ app.use((req, res, next) => {
     res.json = function(data) {
       // 성공 응답만 로그
       if (res.statusCode < 400 && data && !data.error) {
-        autoLogActivity(req, data).catch(() => {});
+        autoLogActivity(req, data).catch(err => console.error('활동 로그 오류:', err.message));
       }
       return origJson(data);
     };
@@ -156,7 +156,7 @@ const PORT = process.env.PORT || 3000;
 db.init().then(() => {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n========================================`);
-    console.log(`  KMCP 업무포털 서버 시작`);
+    console.log(`  KMCP 연구소 업무포털 서버 시작`);
     console.log(`  http://localhost:${PORT}`);
     console.log(`  사내 접속: http://[서버IP]:${PORT}`);
     console.log(`  기본 계정: admin / admin1234`);
