@@ -180,6 +180,61 @@ async function initDB() {
     );
   `);
 
+  // 건의사항 테이블
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS suggestions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      content TEXT DEFAULT '',
+      category TEXT DEFAULT 'general',
+      author_id INTEGER,
+      status TEXT DEFAULT 'open',
+      admin_reply TEXT DEFAULT '',
+      replied_at DATETIME,
+      is_anonymous INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (author_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS suggestion_likes (
+      suggestion_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      PRIMARY KEY (suggestion_id, user_id),
+      FOREIGN KEY (suggestion_id) REFERENCES suggestions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS polls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      category TEXT DEFAULT 'general',
+      allow_multiple INTEGER DEFAULT 0,
+      is_anonymous INTEGER DEFAULT 0,
+      deadline DATETIME,
+      created_by INTEGER,
+      status TEXT DEFAULT 'active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS poll_options (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poll_id INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS poll_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      option_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
   // 마이그레이션: is_approved 컬럼 추가
   try { await db.exec('ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 0'); } catch(e) { /* 이미 존재 */ }
   // 기존 사용자 전부 승인 처리

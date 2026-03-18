@@ -21,6 +21,8 @@ const pageRenderers = {
   projects: renderProjects,
   meetings: renderMeetings,
   notices: renderNotices,
+  suggestions: renderSuggestions,
+  polls: renderPolls,
   users: renderUsers,
 };
 

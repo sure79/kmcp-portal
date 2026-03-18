@@ -1111,6 +1111,76 @@ body {
 
 .loading-state { padding: 48px; text-align: center; color: var(--text-tertiary); }
 
+/* ===== 건의사항 ===== */
+.sg-filter-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.sg-filter { border: 1px solid var(--border); border-radius: 20px; font-size: 12px; padding: 5px 14px; }
+.sg-filter.active { background: var(--text); color: white; border-color: var(--text); }
+.sg-card { cursor: pointer; transition: all var(--transition); margin-bottom: 10px; padding: 16px 20px; }
+.sg-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.sg-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sg-cat-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+.sg-status-badge { font-size: 11px; font-weight: 700; }
+.sg-time { font-size: 11px; color: var(--text-tertiary); margin-left: auto; }
+.sg-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.sg-preview { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.sg-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.sg-author { font-size: 12px; color: var(--text-tertiary); }
+.sg-actions { display: flex; align-items: center; gap: 8px; }
+.sg-like-btn { font-size: 13px !important; }
+.sg-replied-badge { font-size: 11px; color: var(--green); font-weight: 600; }
+.sg-reply-box {
+  margin-top: 16px; padding: 14px 16px; background: var(--green-light);
+  border-radius: var(--radius); border-left: 3px solid var(--green);
+}
+.sg-reply-box h4 { font-size: 12px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+.sg-reply-box p { font-size: 13px; line-height: 1.6; }
+
+/* ===== 투표 ===== */
+.poll-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.poll-tab { border: 1px solid var(--border); border-radius: 20px; font-size: 12px; padding: 5px 14px; }
+.poll-tab.active { background: var(--text); color: white; border-color: var(--text); }
+.poll-card { margin-bottom: 12px; padding: 20px; }
+.poll-card.poll-closed { opacity: 0.7; }
+.poll-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.poll-cat { font-size: 13px; font-weight: 600; }
+.poll-deadline, .poll-anon, .poll-multi { font-size: 11px; color: var(--text-tertiary); }
+.poll-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.poll-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+.poll-options { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.poll-option {
+  position: relative; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; overflow: hidden; transition: all var(--transition);
+}
+.poll-option.votable { cursor: pointer; }
+.poll-option.votable:hover { border-color: var(--blue); background: var(--blue-light); }
+.poll-option.my-vote { border-color: var(--coral); background: var(--coral-light); }
+.poll-option.winner { border-color: var(--green); border-width: 2px; }
+.poll-option-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: var(--blue-light); transition: width 0.5s ease; z-index: 0;
+}
+.poll-option.my-vote .poll-option-bar { background: var(--coral-light); }
+.poll-option.winner .poll-option-bar { background: var(--green-light); }
+.poll-option-content {
+  position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+}
+.poll-option-text { font-size: 14px; font-weight: 500; }
+.poll-option-count { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.poll-voters {
+  position: relative; z-index: 1; font-size: 11px; color: var(--text-tertiary);
+  margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-light);
+}
+.poll-footer {
+  display: flex; align-items: center; justify-content: space-between; margin-top: 8px;
+  font-size: 12px;
+}
+.poll-footer-actions { display: flex; gap: 4px; }
+.poll-option-input {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; font-family: inherit; margin-bottom: 6px;
+}
+.poll-option-input:focus { outline: none; border-color: var(--coral); }
+
 /* ===== 반응형 ===== */
 @media (max-width: 1100px) {
   .weekly-board-wrapper { font-size: 12px; }

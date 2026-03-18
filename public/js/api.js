@@ -77,5 +77,19 @@ const api = {
   notifications: {
     list: () => api.get('/api/notifications'),
   },
+  suggestions: {
+    list: () => api.get('/api/suggestions'),
+    create: (d) => api.post('/api/suggestions', d),
+    like: (id, userId) => api.post(`/api/suggestions/${id}/like`, { user_id: userId }),
+    reply: (id, d) => api.post(`/api/suggestions/${id}/reply`, d),
+    delete: (id) => api.delete(`/api/suggestions/${id}`),
+  },
+  polls: {
+    list: () => api.get('/api/polls'),
+    create: (d) => api.post('/api/polls', d),
+    vote: (id, userId, optionIds) => api.post(`/api/polls/${id}/vote`, { user_id: userId, option_ids: optionIds }),
+    close: (id) => api.post(`/api/polls/${id}/close`),
+    delete: (id) => api.delete(`/api/polls/${id}`),
+  },
   search: (q) => api.get(`/api/search?q=${encodeURIComponent(q)}`),
 };
