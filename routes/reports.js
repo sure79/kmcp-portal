@@ -19,7 +19,7 @@ router.get('/weekly-summary', async (req, res) => {
     if (!start || !end) return res.status(400).json({ error: '기간을 지정하세요' });
 
     // 모든 사용자
-    const users = await db.all('SELECT id, name, department, position FROM users WHERE approved=1 ORDER BY department, name');
+    const users = await db.all('SELECT id, name, department, position FROM users WHERE is_approved=1 ORDER BY department, name');
 
     // 해당 기간 보고서
     const reports = await db.all(
