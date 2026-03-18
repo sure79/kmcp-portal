@@ -1,0 +1,66 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/team', async (req, res) => {
+  try {
+    const targetDate = req.query.date || new Date().toISOString().split('T')[0];
+    const reports = await db.all(
+      `SELECT r.*, u.name, u.department, u.position FROM daily_reports r
+       JOIN users u ON r.user_id = u.id WHERE r.report_date = ? ORDER BY u.name`, targetDate);
+    res.json(reports);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/', async (req, res) => {
+  try {
+    const { user_id, start, end } = req.query;
+    let sql = 'SELECT r.*, u.name, u.department FROM daily_reports r JOIN users u ON r.user_id = u.id WHERE 1=1';
+    const params = [];
+    if (user_id) { sql += ' AND r.user_id = ?'; params.push(user_id); }
+    if (start) { sql += ' AND r.report_date >= ?'; params.push(start); }
+    if (end) { sql += ' AND r.report_date <= ?'; params.push(end); }
+    sql += ' ORDER BY r.report_date DESC, u.name';
+    const reports = await db.all(sql, ...params);
+    res.json(reports);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/:id', async (req, res) => {
+  try {
+    const report = await db.get(
+      `SELECT r.*, u.name, u.department, u.position FROM daily_reports r
+       JOIN users u ON r.user_id = u.id WHERE r.id = ?`, req.params.id);
+    if (!report) return res.status(404).json({ error: '보고서를 찾을 수 없습니다.' });
+    res.json(report);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/', async (req, res) => {
+  try {
+    const { user_id, report_date, work_done, work_planned, special_notes, safety_notes } = req.body;
+    if (!user_id || !report_date) return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
+
+    const existing = await db.get('SELECT id FROM daily_reports WHERE user_id=? AND report_date=?', user_id, report_date);
+    if (existing) {
+      await db.run(
+        'UPDATE daily_reports SET work_done=?, work_planned=?, special_notes=?, safety_notes=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND report_date=?',
+        work_done||'', work_planned||'', special_notes||'', safety_notes||'', user_id, report_date);
+      res.json({ id: existing.id, updated: true });
+    } else {
+      const result = await db.run(
+        'INSERT INTO daily_reports (user_id, report_date, work_done, work_planned, special_notes, safety_notes) VALUES (?, ?, ?, ?, ?, ?)',
+        user_id, report_date, work_done||'', work_planned||'', special_notes||'', safety_notes||'');
+      res.json({ id: result.lastInsertRowid, updated: false });
+    }
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    await db.run('DELETE FROM daily_reports WHERE id = ?', req.params.id);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+module.exports = router;

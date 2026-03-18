@@ -1,0 +1,253 @@
+let meetingType = 'all';
+
+async function renderMeetings() {
+  const page = document.getElementById('page-meetings');
+  page.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">회의</h2>
+        <p class="page-subtitle">주간회의 (월 08:30) · 기술회의 (목 10:00~12:00)</p>
+      </div>
+      <button class="btn btn-coral" onclick="openMeetingForm()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        회의 등록
+      </button>
+    </div>
+    <div class="meeting-tabs">
+      <button class="meeting-tab active" onclick="filterMeetings('all', this)">전체</button>
+      <button class="meeting-tab" onclick="filterMeetings('weekly', this)">주간회의</button>
+      <button class="meeting-tab" onclick="filterMeetings('technical', this)">기술회의</button>
+    </div>
+    <div id="meetings-list"></div>
+  `;
+  loadMeetings();
+}
+
+function filterMeetings(type, btn) {
+  meetingType = type;
+  document.querySelectorAll('.meeting-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadMeetings();
+}
+
+async function loadMeetings() {
+  const params = meetingType !== 'all' ? { type: meetingType } : {};
+  const meetings = await api.meetings.list(params).catch(() => []);
+  const list = document.getElementById('meetings-list');
+
+  if (!meetings.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>등록된 회의가 없습니다</p></div>`;
+    return;
+  }
+
+  // 월별 그룹화
+  const grouped = {};
+  meetings.forEach(m => {
+    const monthKey = m.meeting_date.slice(0, 7);
+    if (!grouped[monthKey]) grouped[monthKey] = [];
+    grouped[monthKey].push(m);
+  });
+
+  list.innerHTML = Object.entries(grouped).map(([month, items]) => {
+    const [y, mo] = month.split('-');
+    return `
+      <div class="meeting-month-group">
+        <div class="meeting-month-header">${y}년 ${parseInt(mo)}월</div>
+        <div class="card" style="padding:0">
+          ${items.map(m => {
+            const hasMinutes = m.minutes || m.decisions;
+            return `
+              <div class="meeting-list-item" onclick="viewMeeting(${m.id})">
+                <div class="meeting-date-badge">
+                  <div class="month">${m.meeting_date.slice(5,7)}월</div>
+                  <div class="day">${m.meeting_date.slice(8,10)}</div>
+                </div>
+                <div class="meeting-info">
+                  <div class="meeting-title">${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}</div>
+                  <div class="meeting-time">
+                    ${m.start_time || ''} ${m.end_time ? '~ '+m.end_time : ''} · ${m.creator_name||''}
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  ${hasMinutes ? '<span class="badge badge-done" style="font-size:10px">회의록</span>' : '<span class="badge badge-pending" style="font-size:10px">기록없음</span>'}
+                  <span class="badge badge-${m.type}">${m.type === 'weekly' ? '주간' : '기술'}</span>
+                </div>
+                <div style="display:flex;gap:4px;margin-left:8px" onclick="event.stopPropagation()">
+                  <button class="btn btn-ghost btn-sm" onclick="openMeetingForm(${m.id})">수정</button>
+                  <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteMeeting(${m.id})">삭제</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openMeetingForm(meetingId) {
+  const users = await api.users.list().catch(() => []);
+  let meeting = null, attendeeIds = [];
+  if (meetingId) {
+    meeting = await api.meetings.get(meetingId).catch(() => null);
+    attendeeIds = meeting?.attendees?.map(a => a.id) || [];
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('modal').classList.add('modal-xl');
+
+  modal.show(
+    meetingId ? '회의 수정' : '새 회의 등록',
+    `<div class="form-row">
+       <div class="form-group"><label>회의 유형 *</label>
+         <select id="m-type">
+           <option value="weekly" ${meeting?.type=='weekly'||!meeting?'selected':''}>주간회의</option>
+           <option value="technical" ${meeting?.type=='technical'?'selected':''}>기술회의</option>
+         </select>
+       </div>
+       <div class="form-group"><label>날짜 *</label><input type="date" id="m-date" value="${meeting?.meeting_date||today}"></div>
+     </div>
+     <div class="form-row">
+       <div class="form-group"><label>시작 시간</label><input type="time" id="m-start" value="${meeting?.start_time||''}"></div>
+       <div class="form-group"><label>종료 시간</label><input type="time" id="m-end" value="${meeting?.end_time||''}"></div>
+     </div>
+     <div class="form-group"><label>회의 제목</label><input type="text" id="m-title" value="${meeting?.title||''}" placeholder="예: 3월 2주차 주간회의"></div>
+     <div class="form-group"><label>안건</label><textarea id="m-agenda" rows="3" placeholder="회의 안건을 입력하세요">${meeting?.agenda||''}</textarea></div>
+     <div class="form-group"><label>회의록</label><textarea id="m-minutes" rows="5" placeholder="회의 내용을 기록하세요 (나중에 녹음 기능 추가 예정)">${meeting?.minutes||''}</textarea></div>
+     <div class="form-group"><label>결정사항</label><textarea id="m-decisions" rows="3" placeholder="회의에서 결정된 사항을 입력하세요">${meeting?.decisions||''}</textarea></div>
+     <div class="form-group">
+       <label>참석자</label>
+       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">
+         ${users.map(u=>`
+           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;transition:all 0.15s">
+             <input type="checkbox" name="m-attendee" value="${u.id}" ${attendeeIds.includes(u.id)?'checked':''}>
+             ${u.name}
+           </label>
+         `).join('')}
+       </div>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
+     <button class="btn btn-coral" onclick="saveMeeting(${meetingId||'null'})">저장</button>`
+  );
+
+  const origHide = modal._origHide || modal.hide;
+  if (!modal._origHide) modal._origHide = modal.hide;
+  modal.hide = () => {
+    document.getElementById('modal').classList.remove('modal-xl');
+    origHide.call(modal);
+    modal.hide = origHide;
+  };
+}
+
+async function saveMeeting(meetingId) {
+  const attendeeIds = Array.from(document.querySelectorAll('input[name="m-attendee"]:checked')).map(el => parseInt(el.value));
+  const data = {
+    type: document.getElementById('m-type').value,
+    meeting_date: document.getElementById('m-date').value,
+    start_time: document.getElementById('m-start').value,
+    end_time: document.getElementById('m-end').value,
+    title: document.getElementById('m-title').value,
+    agenda: document.getElementById('m-agenda').value,
+    minutes: document.getElementById('m-minutes').value,
+    decisions: document.getElementById('m-decisions').value,
+    created_by: window._currentUser?.id,
+    attendee_ids: attendeeIds,
+  };
+  if (!data.meeting_date) { toast('날짜를 입력하세요', 'error'); return; }
+  try {
+    if (meetingId) await api.meetings.update(meetingId, data);
+    else await api.meetings.create(data);
+    modal.hide();
+    toast(meetingId ? '수정되었습니다' : '회의가 등록되었습니다');
+    loadMeetings();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function viewMeeting(id) {
+  const m = await api.meetings.get(id).catch(() => null);
+  if (!m) return;
+
+  document.getElementById('modal').classList.add('modal-xl');
+
+  modal.show(
+    '',
+    `<div class="meeting-view">
+      <div class="meeting-view-header">
+        <span class="badge badge-${m.type}" style="font-size:13px;padding:4px 14px">${m.type === 'weekly' ? '주간회의' : '기술회의'}</span>
+        <h2 class="meeting-view-title">${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}</h2>
+        <div class="meeting-view-meta">
+          ${m.meeting_date} · ${m.start_time||''} ${m.end_time ? '~ '+m.end_time : ''} · 작성: ${m.creator_name||'-'}
+        </div>
+      </div>
+
+      ${m.agenda ? `
+        <div class="meeting-section">
+          <h4>안건</h4>
+          <div class="meeting-content-box">${m.agenda}</div>
+        </div>
+      ` : ''}
+
+      ${m.minutes ? `
+        <div class="meeting-section">
+          <h4>회의록</h4>
+          <div class="meeting-content-box minutes">${m.minutes}</div>
+        </div>
+      ` : ''}
+
+      ${m.decisions ? `
+        <div class="meeting-section">
+          <h4>결정사항</h4>
+          <div class="decisions-box">${m.decisions}</div>
+        </div>
+      ` : ''}
+
+      ${!m.agenda && !m.minutes && !m.decisions ? `
+        <div class="empty-state" style="padding:32px">
+          <div class="empty-icon">📝</div>
+          <p>아직 회의록이 작성되지 않았습니다</p>
+          <button class="btn btn-coral btn-sm" style="margin-top:12px" onclick="modal.hide();openMeetingForm(${id})">회의록 작성</button>
+        </div>
+      ` : ''}
+
+      ${m.attendees?.length ? `
+        <div class="meeting-section">
+          <h4>참석자 (${m.attendees.length}명)</h4>
+          <div class="attendee-list">
+            ${m.attendees.map(a => `<span class="attendee-chip ${a.confirmed?'confirmed':''}">
+              ${a.confirmed ? '✔ ' : ''}${a.name}
+            </span>`).join('')}
+          </div>
+          <button class="btn btn-success btn-sm" style="margin-top:10px" onclick="confirmAttendance(${id})">참석 확인</button>
+        </div>
+      ` : ''}
+
+      <div class="meeting-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <p style="font-size:12px;color:var(--text-tertiary)">🎤 녹음 기능은 추후 업데이트 예정입니다</p>
+      </div>
+    </div>`,
+    `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
+     <button class="btn btn-coral" onclick="modal.hide();openMeetingForm(${id})">수정</button>`
+  );
+
+  const origHide = modal._origHide || modal.hide;
+  if (!modal._origHide) modal._origHide = modal.hide;
+  modal.hide = () => {
+    document.getElementById('modal').classList.remove('modal-xl');
+    origHide.call(modal);
+    modal.hide = origHide;
+  };
+}
+
+async function confirmAttendance(meetingId) {
+  if (!window._currentUser) return;
+  await api.meetings.confirm(meetingId, window._currentUser.id);
+  toast('참석 확인되었습니다');
+  viewMeeting(meetingId);
+}
+
+async function deleteMeeting(id) {
+  if (!confirm('회의를 삭제하시겠습니까?')) return;
+  await api.meetings.delete(id);
+  toast('삭제되었습니다');
+  loadMeetings();
+}
