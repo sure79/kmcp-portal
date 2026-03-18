@@ -12,6 +12,29 @@ function loadSortable() {
 let allUsers = [], allProjects = [], allTasks = [];
 let weekRange = { start: 0, count: 5 };
 
+// 보드 설정 (localStorage에 저장)
+let boardConfig = loadBoardConfig();
+
+function loadBoardConfig() {
+  try {
+    const saved = localStorage.getItem('kanban-board-config');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return {
+    weekCount: 5,
+    cellMinHeight: 140,
+    projectColWidth: 160,
+    showParking: true,
+    showDone: true,
+    stickyFontSize: 12,
+    compactMode: false,
+  };
+}
+
+function saveBoardConfig() {
+  localStorage.setItem('kanban-board-config', JSON.stringify(boardConfig));
+}
+
 // ISO 주차 계산
 function getISOWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -39,7 +62,7 @@ function generateWeeks() {
   const today = new Date();
   const current = getISOWeek(today);
   const weeks = [];
-  for (let i = weekRange.start; i < weekRange.start + weekRange.count; i++) {
+  for (let i = weekRange.start; i < weekRange.start + boardConfig.weekCount; i++) {
     let w = current.week + i;
     let y = current.year;
     if (w > 52) { w -= 52; y++; }
@@ -84,16 +107,76 @@ async function renderKanban() {
         <h2 class="page-title">칸반 보드</h2>
         <p class="page-subtitle">주간 스케줄 보드 · 드래그 앤 드롭으로 일정을 관리하세요</p>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-ghost" onclick="shiftWeeks(-2)" title="이전">◀ 이전</button>
         <button class="btn btn-secondary" onclick="resetWeeks()">이번 주</button>
         <button class="btn btn-ghost" onclick="shiftWeeks(2)" title="다음">다음 ▶</button>
+        <div style="width:1px;height:24px;background:var(--border);margin:0 4px"></div>
+        <button class="btn btn-ghost" onclick="toggleBoardSettings()" id="board-settings-btn" title="보드 설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06"/></svg>
+          설정
+        </button>
         <button class="btn btn-coral" onclick="openTaskForm()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           작업 추가
         </button>
       </div>
     </div>
+
+    <!-- 보드 설정 패널 -->
+    <div class="board-settings-panel" id="board-settings-panel" style="display:none">
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label>표시 주차 수</label>
+          <div class="setting-control">
+            <button class="btn-stepper" onclick="adjustSetting('weekCount', -1, 2, 12)">−</button>
+            <span id="setting-weekCount" class="setting-value">${boardConfig.weekCount}</span>
+            <button class="btn-stepper" onclick="adjustSetting('weekCount', 1, 2, 12)">+</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label>셀 최소 높이</label>
+          <div class="setting-control">
+            <button class="btn-stepper" onclick="adjustSetting('cellMinHeight', -20, 80, 300)">−</button>
+            <span id="setting-cellMinHeight" class="setting-value">${boardConfig.cellMinHeight}px</span>
+            <button class="btn-stepper" onclick="adjustSetting('cellMinHeight', 20, 80, 300)">+</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label>프로젝트열 폭</label>
+          <div class="setting-control">
+            <button class="btn-stepper" onclick="adjustSetting('projectColWidth', -20, 100, 280)">−</button>
+            <span id="setting-projectColWidth" class="setting-value">${boardConfig.projectColWidth}px</span>
+            <button class="btn-stepper" onclick="adjustSetting('projectColWidth', 20, 100, 280)">+</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label>글자 크기</label>
+          <div class="setting-control">
+            <button class="btn-stepper" onclick="adjustSetting('stickyFontSize', -1, 9, 18)">−</button>
+            <span id="setting-stickyFontSize" class="setting-value">${boardConfig.stickyFontSize}px</span>
+            <button class="btn-stepper" onclick="adjustSetting('stickyFontSize', 1, 9, 18)">+</button>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label>Parking 열</label>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" ${boardConfig.showParking ? 'checked' : ''} onchange="toggleColumn('showParking', this.checked)"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label>Done 열</label>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" ${boardConfig.showDone ? 'checked' : ''} onchange="toggleColumn('showDone', this.checked)"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="resetBoardConfig()">초기화</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleBoardSettings()">닫기</button>
+      </div>
+    </div>
+
     <div class="weekly-board-wrapper" id="weekly-board-wrapper">
       <div class="weekly-board" id="weekly-board"></div>
     </div>
@@ -109,6 +192,50 @@ async function renderKanban() {
   renderWeeklyBoard();
 }
 
+function toggleBoardSettings() {
+  const panel = document.getElementById('board-settings-panel');
+  const btn = document.getElementById('board-settings-btn');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    btn.classList.add('active');
+  } else {
+    panel.style.display = 'none';
+    btn.classList.remove('active');
+  }
+}
+
+function adjustSetting(key, delta, min, max) {
+  boardConfig[key] = Math.min(max, Math.max(min, boardConfig[key] + delta));
+  const el = document.getElementById(`setting-${key}`);
+  const suffix = ['cellMinHeight','projectColWidth','stickyFontSize'].includes(key) ? 'px' : '';
+  if (el) el.textContent = boardConfig[key] + suffix;
+  if (key === 'weekCount') weekRange.count = boardConfig.weekCount;
+  saveBoardConfig();
+  renderWeeklyBoard();
+}
+
+function toggleColumn(key, value) {
+  boardConfig[key] = value;
+  saveBoardConfig();
+  renderWeeklyBoard();
+}
+
+function resetBoardConfig() {
+  boardConfig = { weekCount: 5, cellMinHeight: 140, projectColWidth: 160, showParking: true, showDone: true, stickyFontSize: 12, compactMode: false };
+  weekRange.count = 5;
+  saveBoardConfig();
+  // 설정 패널 UI 갱신
+  document.getElementById('setting-weekCount').textContent = boardConfig.weekCount;
+  document.getElementById('setting-cellMinHeight').textContent = boardConfig.cellMinHeight + 'px';
+  document.getElementById('setting-projectColWidth').textContent = boardConfig.projectColWidth + 'px';
+  document.getElementById('setting-stickyFontSize').textContent = boardConfig.stickyFontSize + 'px';
+  document.querySelectorAll('.board-settings-panel input[type="checkbox"]').forEach((cb, i) => {
+    cb.checked = i === 0 ? boardConfig.showParking : boardConfig.showDone;
+  });
+  renderWeeklyBoard();
+  toast('보드 설정이 초기화되었습니다');
+}
+
 async function loadKanban() {
   allTasks = await api.tasks.list().catch(() => []);
   renderWeeklyBoard();
@@ -116,10 +243,14 @@ async function loadKanban() {
 
 function renderWeeklyBoard() {
   const board = document.getElementById('weekly-board');
+  if (!board) return;
   const weeks = generateWeeks();
   const projectRows = [...allProjects.filter(p => p.status === 'active'), { id: null, name: '미분류' }];
 
-  let headerHTML = `<div class="wb-corner">프로젝트</div>`;
+  const extraCols = (boardConfig.showParking ? 1 : 0) + (boardConfig.showDone ? 1 : 0);
+  const totalCols = 1 + weeks.length + extraCols;
+
+  let headerHTML = `<div class="wb-corner" style="min-width:${boardConfig.projectColWidth}px">프로젝트</div>`;
   weeks.forEach(w => {
     headerHTML += `
       <div class="wb-week-header ${w.isCurrent ? 'current-week' : ''}">
@@ -129,10 +260,13 @@ function renderWeeklyBoard() {
       </div>
     `;
   });
-  headerHTML += `<div class="wb-week-header wb-special-header parking-header"><div class="wb-week-label">Parking</div><div class="wb-week-month">보류</div></div>`;
-  headerHTML += `<div class="wb-week-header wb-special-header done-header"><div class="wb-week-label">Done</div><div class="wb-week-month">완료</div></div>`;
+  if (boardConfig.showParking) {
+    headerHTML += `<div class="wb-week-header wb-special-header parking-header"><div class="wb-week-label">Parking</div><div class="wb-week-month">보류</div></div>`;
+  }
+  if (boardConfig.showDone) {
+    headerHTML += `<div class="wb-week-header wb-special-header done-header"><div class="wb-week-label">Done</div><div class="wb-week-month">완료</div></div>`;
+  }
 
-  // 프로젝트 매칭 헬퍼
   function taskBelongsToProject(t, projId) {
     if (projId === null) return !t.project_id || t.project_id === null || t.project_id === 0;
     return t.project_id != null && Number(t.project_id) === Number(projId);
@@ -140,7 +274,7 @@ function renderWeeklyBoard() {
 
   let bodyHTML = '';
   projectRows.forEach(proj => {
-    bodyHTML += `<div class="wb-project-label" style="border-left: 4px solid ${getProjectColor(proj.id)}">
+    bodyHTML += `<div class="wb-project-label" style="border-left: 4px solid ${getProjectColor(proj.id)};min-width:${boardConfig.projectColWidth}px;min-height:${boardConfig.cellMinHeight}px">
       <span class="wb-project-name">${proj.name}</span>
     </div>`;
 
@@ -151,36 +285,46 @@ function renderWeeklyBoard() {
       );
       bodyHTML += `
         <div class="wb-cell ${w.isCurrent ? 'current-week-col' : ''}"
+             style="min-height:${boardConfig.cellMinHeight}px"
              id="cell-${proj.id}-${w.key}" data-project="${proj.id}" data-week="${w.key}" data-status="pending">
           ${cellTasks.map(t => renderStickyNote(t)).join('')}
         </div>
       `;
     });
 
-    const parkingTasks = allTasks.filter(t =>
-      taskBelongsToProject(t, proj.id) &&
-      (!t.target_week || t.target_week === '') && t.status !== 'done'
-    );
-    bodyHTML += `
-      <div class="wb-cell wb-special-cell parking-cell"
-           id="cell-${proj.id}-parking" data-project="${proj.id}" data-week="" data-status="pending">
-        ${parkingTasks.map(t => renderStickyNote(t)).join('')}
-      </div>
-    `;
+    if (boardConfig.showParking) {
+      const parkingTasks = allTasks.filter(t =>
+        taskBelongsToProject(t, proj.id) &&
+        (!t.target_week || t.target_week === '') && t.status !== 'done'
+      );
+      bodyHTML += `
+        <div class="wb-cell wb-special-cell parking-cell" style="min-height:${boardConfig.cellMinHeight}px"
+             id="cell-${proj.id}-parking" data-project="${proj.id}" data-week="" data-status="pending">
+          ${parkingTasks.map(t => renderStickyNote(t)).join('')}
+        </div>
+      `;
+    }
 
-    const doneTasks = allTasks.filter(t =>
-      taskBelongsToProject(t, proj.id) && t.status === 'done'
-    );
-    bodyHTML += `
-      <div class="wb-cell wb-special-cell done-cell"
-           id="cell-${proj.id}-done" data-project="${proj.id}" data-week="" data-status="done">
-        ${doneTasks.map(t => renderStickyNote(t, true)).join('')}
-      </div>
-    `;
+    if (boardConfig.showDone) {
+      const doneTasks = allTasks.filter(t =>
+        taskBelongsToProject(t, proj.id) && t.status === 'done'
+      );
+      bodyHTML += `
+        <div class="wb-cell wb-special-cell done-cell" style="min-height:${boardConfig.cellMinHeight}px"
+             id="cell-${proj.id}-done" data-project="${proj.id}" data-week="" data-status="done">
+          ${doneTasks.map(t => renderStickyNote(t, true)).join('')}
+        </div>
+      `;
+    }
   });
 
-  board.style.gridTemplateColumns = `160px repeat(${weeks.length}, 1fr) 180px 180px`;
+  const parkingW = boardConfig.showParking ? ' 180px' : '';
+  const doneW = boardConfig.showDone ? ' 180px' : '';
+  board.style.gridTemplateColumns = `${boardConfig.projectColWidth}px repeat(${weeks.length}, 1fr)${parkingW}${doneW}`;
   board.innerHTML = headerHTML + bodyHTML;
+
+  // 글자 크기 적용
+  board.style.setProperty('--sticky-font', boardConfig.stickyFontSize + 'px');
 
   // SortableJS
   board.querySelectorAll('.wb-cell').forEach(cell => {
@@ -207,7 +351,6 @@ function renderWeeklyBoard() {
           if (window._socket) {
             window._socket.emit('task:move', { taskId, movedBy: window._currentUser?.name });
           }
-          // 서버에서 최신 데이터를 다시 가져와서 보드 갱신
           await loadKanban();
         } catch(e) {
           toast('저장 중 오류 발생', 'error');
@@ -221,20 +364,21 @@ function renderWeeklyBoard() {
 function renderStickyNote(t, isDone) {
   const colors = STICKY_COLORS[t.priority] || STICKY_COLORS.medium;
   const opacity = isDone ? 'opacity: 0.55;' : '';
+  const fontSize = boardConfig.stickyFontSize || 12;
   const statusDot = t.status === 'in_progress' ? '<span class="sticky-status-dot in-progress"></span>' :
                     t.status === 'review' ? '<span class="sticky-status-dot review"></span>' : '';
   return `
     <div class="sticky-note" data-task-id="${t.id}"
          onclick="openTaskDetail(${t.id})"
-         style="background:${colors.bg}; border-color:${colors.border}; color:${colors.text}; ${opacity}">
+         style="background:${colors.bg}; border-color:${colors.border}; color:${colors.text}; ${opacity}; --s-font:${fontSize}px;">
       <div class="sticky-actions">
         <button class="sticky-btn" onclick="event.stopPropagation();openTaskForm(${t.id})" title="수정">✎</button>
         <button class="sticky-btn" onclick="event.stopPropagation();deleteTask(${t.id})" title="삭제">×</button>
       </div>
       ${statusDot}
-      <div class="sticky-title">${t.title}</div>
-      ${t.description ? `<div class="sticky-desc">${t.description.substring(0, 80)}${t.description.length > 80 ? '...' : ''}</div>` : ''}
-      ${t.assignee_name ? `<div class="sticky-assignee">${t.assignee_name}</div>` : ''}
+      <div class="sticky-title" style="font-size:${fontSize}px">${t.title}</div>
+      ${t.description ? `<div class="sticky-desc" style="font-size:${fontSize - 1}px">${t.description.substring(0, 80)}${t.description.length > 80 ? '...' : ''}</div>` : ''}
+      ${t.assignee_name ? `<div class="sticky-assignee" style="font-size:${fontSize - 2}px">${t.assignee_name}</div>` : ''}
     </div>
   `;
 }
@@ -250,7 +394,6 @@ function openTaskDetail(taskId) {
   const statusLabel = STATUS_LABELS[t.status] || t.status;
   const priorityLabel = PRIORITY_LABELS[t.priority] || t.priority;
 
-  // 주차 라벨
   let weekDisplay = 'Parking (미배치)';
   if (t.target_week) {
     const match = t.target_week.match(/^(\d{4})-W(\d{2})$/);
@@ -260,7 +403,6 @@ function openTaskDetail(taskId) {
     }
   }
 
-  const overlay = document.getElementById('modal-overlay');
   const modalEl = document.getElementById('modal');
   modalEl.classList.add('modal-xl');
 
@@ -282,12 +424,7 @@ function openTaskDetail(taskId) {
             <h4>설명</h4>
             <div class="task-detail-desc">${t.description || '<span style="color:var(--text-tertiary)">설명이 없습니다</span>'}</div>
           </div>
-
-          ${t.due_date ? `
-          <div class="task-detail-section">
-            <h4>마감일</h4>
-            <p>${t.due_date}</p>
-          </div>` : ''}
+          ${t.due_date ? `<div class="task-detail-section"><h4>마감일</h4><p>${t.due_date}</p></div>` : ''}
         </div>
 
         <div class="task-detail-sidebar">
@@ -322,7 +459,6 @@ function openTaskDetail(taskId) {
      <button class="btn btn-coral" onclick="modal.hide();openTaskForm(${t.id})">수정</button>`
   );
 
-  // 모달 닫힐 때 xl 클래스 제거
   const origHide = modal._origHide || modal.hide;
   if (!modal._origHide) modal._origHide = modal.hide;
   modal.hide = () => {
@@ -363,7 +499,6 @@ async function openTaskForm(taskId) {
     }
   }
 
-  // modal-xl 제거 (폼은 기본 크기)
   document.getElementById('modal').classList.remove('modal-xl');
 
   modal.show(

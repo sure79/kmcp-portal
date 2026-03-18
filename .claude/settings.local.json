@@ -3,7 +3,9 @@
     "allow": [
       "Bash(node server.js)",
       "Bash(node -e \":*)",
-      "Bash(node -e \"const db = require\\(''./database/db''\\); const notif = require\\(''./routes/notifications''\\); console.log\\(''All modules OK''\\);\")"
+      "Bash(node -e \"const db = require\\(''./database/db''\\); const notif = require\\(''./routes/notifications''\\); console.log\\(''All modules OK''\\);\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
