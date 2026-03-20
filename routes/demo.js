@@ -21,7 +21,8 @@ function getWeekKey(date) {
 
 // 관리자만 접근 가능
 router.post('/reset', async (req, res) => {
-  if (!req.session?.user?.is_admin) return res.status(403).json({ error: '관리자만 사용 가능합니다.' });
+  const isAdmin = req.session?.user?.is_admin || req.session?.isAdmin;
+  if (!isAdmin) return res.status(403).json({ error: '관리자만 사용 가능합니다.' });
 
   try {
     // ── 기존 데이터 삭제 ──────────────────────────

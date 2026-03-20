@@ -116,6 +116,7 @@ router.post('/login', async (req, res) => {
     req.session.userId = user.id;
     req.session.userName = user.name;
     req.session.isAdmin = user.is_admin;
+    req.session.user = { id: user.id, name: user.name, department: user.department, position: user.position, is_admin: user.is_admin };
     res.json({ id: user.id, name: user.name, department: user.department, position: user.position, is_admin: user.is_admin });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

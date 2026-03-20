@@ -5,7 +5,7 @@ const db = require('../database/db');
 // 사용자별 알림 목록 조회
 router.get('/', async (req, res) => {
   try {
-    const userId = req.session?.user?.id;
+    const userId = req.session?.user?.id || req.session?.userId;
     if (!userId) return res.json([]);
 
     const today = new Date().toISOString().split('T')[0];
@@ -75,7 +75,7 @@ router.get('/', async (req, res) => {
     });
 
     // 5) 관리자: 승인 대기 사용자
-    const user = req.session.user;
+    const user = req.session.user || { is_admin: req.session?.isAdmin };
     if (user && user.is_admin) {
       const pendingUsers = await db.all("SELECT id, name FROM users WHERE is_approved = 0");
       if (pendingUsers.length > 0) {
