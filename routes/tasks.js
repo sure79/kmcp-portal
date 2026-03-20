@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
     const result = await db.run(
       'INSERT INTO tasks (title, description, assignee_id, project_id, status, priority, due_date, target_week, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       title, description||'', assignee_id||null, project_id||null, status||'pending', priority||'medium', due_date||null, target_week||'', sortOrder);
-    req.logAndNotify({ type: 'task', action: 'create', title: `새 작업: ${title}`, message: (description||'').substring(0,100), actor_id: req.session?.user?.id || 0, actor_name: req.session?.user?.name || '', target_page: 'kanban', target_id: result.lastInsertRowid });
+    await req.logAndNotify({ type: 'task', action: 'create', title: `새 작업: ${title}`, message: (description||'').substring(0,100), actor_id: req.session?.user?.id || 0, actor_name: req.session?.user?.name || '', target_page: 'kanban', target_id: result.lastInsertRowid });
     res.json({ id: result.lastInsertRowid });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

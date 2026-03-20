@@ -237,9 +237,10 @@ async function initDB() {
 
   // 알림 히스토리 테이블
   try {
-    await db.exec(`CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, action TEXT NOT NULL, title TEXT NOT NULL, message TEXT DEFAULT '', actor_id INTEGER, actor_name TEXT DEFAULT '', target_page TEXT DEFAULT '', target_id INTEGER, is_read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    await db.run(`CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, action TEXT NOT NULL, title TEXT NOT NULL, message TEXT DEFAULT '', actor_id INTEGER, actor_name TEXT DEFAULT '', target_page TEXT DEFAULT '', target_id INTEGER, is_read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('activity_log 테이블 준비 완료');
   } catch(e) {
-    console.log('activity_log 테이블 이미 존재 또는 생성 완료');
+    console.error('activity_log 테이블 생성 실패:', e.message);
   }
 
   // 마이그레이션: is_approved 컬럼 추가

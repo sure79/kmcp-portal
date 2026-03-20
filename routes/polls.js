@@ -45,7 +45,7 @@ router.post('/', async (req, res) => {
     for (const opt of options) {
       if (opt.trim()) await db.run('INSERT INTO poll_options (poll_id, text) VALUES (?,?)', pollId, opt.trim());
     }
-    req.logAndNotify({ type: 'poll', action: 'create', title: `새 투표: ${title}`, message: `${options.length}개 선택지`, actor_id: created_by || 0, actor_name: req.session?.user?.name || '', target_page: 'polls', target_id: pollId });
+    await req.logAndNotify({ type: 'poll', action: 'create', title: `새 투표: ${title}`, message: `${options.length}개 선택지`, actor_id: created_by || 0, actor_name: req.session?.user?.name || '', target_page: 'polls', target_id: pollId });
     res.json({ id: pollId });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

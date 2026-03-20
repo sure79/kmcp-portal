@@ -102,13 +102,13 @@ router.post('/', async (req, res) => {
       await db.run(
         'UPDATE daily_reports SET work_done=?, work_planned=?, special_notes=?, safety_notes=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND report_date=?',
         work_done||'', work_planned||'', special_notes||'', safety_notes||'', user_id, report_date);
-      req.logAndNotify({ type: 'report', action: 'update', title: `${userName}님이 업무보고 수정`, message: `${report_date}`, actor_id: user_id, actor_name: userName, target_page: 'reports', target_id: existing.id });
+      await req.logAndNotify({ type: 'report', action: 'update', title: `${userName}님이 업무보고 수정`, message: `${report_date}`, actor_id: user_id, actor_name: userName, target_page: 'reports', target_id: existing.id });
       res.json({ id: existing.id, updated: true });
     } else {
       const result = await db.run(
         'INSERT INTO daily_reports (user_id, report_date, work_done, work_planned, special_notes, safety_notes) VALUES (?, ?, ?, ?, ?, ?)',
         user_id, report_date, work_done||'', work_planned||'', special_notes||'', safety_notes||'');
-      req.logAndNotify({ type: 'report', action: 'create', title: `${userName}님이 업무보고 제출`, message: `${report_date}`, actor_id: user_id, actor_name: userName, target_page: 'reports', target_id: result.lastInsertRowid });
+      await req.logAndNotify({ type: 'report', action: 'create', title: `${userName}님이 업무보고 제출`, message: `${report_date}`, actor_id: user_id, actor_name: userName, target_page: 'reports', target_id: result.lastInsertRowid });
       res.json({ id: result.lastInsertRowid, updated: false });
     }
   } catch(e) { res.status(500).json({ error: e.message }); }
