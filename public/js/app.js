@@ -179,10 +179,14 @@ function initApp(user) {
 // ===== 알림 시스템 =====
 async function loadNotifications() {
   try {
-    const notifs = await api.notifications.list();
+    const [notifs, historyRes] = await Promise.all([
+      api.notifications.list().catch(() => []),
+      api.notifications.history({ limit: 5 }).catch(() => ({ logs: [] })),
+    ]);
     const badge = document.getElementById('notif-badge');
-    if (notifs.length > 0) {
-      badge.textContent = notifs.length;
+    const totalCount = notifs.length + (historyRes.logs ? historyRes.logs.length : 0);
+    if (totalCount > 0) {
+      badge.textContent = notifs.length > 0 ? notifs.length : historyRes.logs.length;
       badge.style.display = 'flex';
     } else {
       badge.style.display = 'none';
