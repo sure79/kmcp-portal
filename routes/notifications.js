@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 
     // 2) 최근 공지사항 (3일 이내)
     const recentDate = new Date();
-    recentDate.setDate(recentDate.getDate() - 3);
+    recentDate.setDate(recentDate.getDate() - 3); // 3일 이내 공지만
     const recentStr = recentDate.toISOString().split('T')[0];
     const recentNotices = await db.all(
       `SELECT n.id, n.title, n.created_at, u.name as author_name
@@ -120,7 +120,7 @@ router.get('/history', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const since = new Date();
-    since.setDate(since.getDate() - 30); // 최근 30일
+    since.setDate(since.getDate() - 3); // 최근 3일
     const sinceStr = since.toISOString().split('T')[0];
 
     const [notices, reports, meetings, tasks, projects, suggestions, polls] = await Promise.all([
