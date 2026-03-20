@@ -46,6 +46,7 @@ app.use('/api/lunch', require('./routes/lunch'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/suggestions', require('./routes/suggestions'));
 app.use('/api/polls', require('./routes/polls'));
+app.use('/api/demo', require('./routes/demo'));
 
 // 글로벌 검색 API
 app.get('/api/search', async (req, res) => {

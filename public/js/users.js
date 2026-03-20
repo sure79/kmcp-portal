@@ -6,10 +6,16 @@ async function renderUsers() {
         <h2 class="page-title">설정</h2>
         <p class="page-subtitle">사용자 계정 및 가입 승인을 관리하세요</p>
       </div>
-      <button class="btn btn-coral" onclick="openUserForm()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        사용자 추가
-      </button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="resetDemoData()" style="background:#f0f4ff;color:#4573D2;border:1px solid #c5d3f5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+          시연 데이터 초기화
+        </button>
+        <button class="btn btn-coral" onclick="openUserForm()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          사용자 추가
+        </button>
+      </div>
     </div>
 
     <!-- 승인 대기 -->
@@ -179,4 +185,28 @@ async function deleteUser(id, name) {
   toast('삭제되었습니다');
   loadPendingUsers();
   loadUsers();
+}
+
+async function resetDemoData() {
+  if (!confirm('⚠️ 기존 데이터를 모두 삭제하고 시연용 예시 데이터를 새로 넣습니다.\n계속하시겠습니까?')) return;
+
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.textContent = '초기화 중...';
+
+  try {
+    const res = await fetch('/api/demo/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const s = data.summary;
+    toast(`✅ 시연 데이터 초기화 완료!\n사용자 ${s.users}명 · 프로젝트 ${s.projects}개 · 작업 ${s.tasks}개 · 보고서 ${s.reports}개`, 'success');
+
+    // 페이지 새로고침
+    setTimeout(() => location.reload(), 1500);
+  } catch(e) {
+    toast('초기화 실패: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg> 시연 데이터 초기화';
+  }
 }
