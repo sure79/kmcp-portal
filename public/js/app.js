@@ -347,7 +347,7 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.topbar-search') && !e.target.closest('.search-dropdown')) {
     document.getElementById('search-dropdown').style.display = 'none';
   }
-  if (!e.target.closest('.notif-wrapper')) {
+  if (e.target.isConnected && !e.target.closest('.notif-wrapper')) {
     document.getElementById('notif-dropdown').style.display = 'none';
   }
 });
