@@ -4,6 +4,20 @@ const api = {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (data) opts.body = JSON.stringify(data);
     const res = await fetch(url, opts);
+
+    // 401 = 세션 만료 → 폴링 중지 + 로그인 화면으로
+    if (res.status === 401) {
+      if (window._notifIntervalId) {
+        clearInterval(window._notifIntervalId);
+        window._notifIntervalId = null;
+      }
+      // 로그인 화면으로 전환 (새로고침이 가장 깔끔)
+      if (url !== '/api/users/login' && url !== '/api/users/logout') {
+        window.location.reload();
+      }
+      throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
+    }
+
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || '요청 실패');
     return json;

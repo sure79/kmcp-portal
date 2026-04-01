@@ -174,9 +174,9 @@ function initApp(user) {
     }
   });
 
-  // 알림 로드
+  // 알림 로드 (인터벌 ID 저장 → 세션 만료 시 중지 가능)
   loadNotifications();
-  setInterval(loadNotifications, 3 * 60 * 1000); // 3분마다 갱신
+  window._notifIntervalId = setInterval(loadNotifications, 3 * 60 * 1000); // 3분마다 갱신
 
   navigateTo('dashboard');
 }

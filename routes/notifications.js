@@ -3,13 +3,14 @@ const router = express.Router();
 const db = require('../database/db');
 const { requireLogin } = require('../middleware/auth');
 
-router.use(requireLogin);
+// 알림은 requireLogin 대신 핸들러 내부에서 세션 확인
+// → 세션 만료 시 401 대신 빈 배열 반환 (클라이언트 에러 스팸 방지)
 
 // 사용자별 알림 목록 조회
 router.get('/', async (req, res) => {
   try {
     const userId = req.session?.user?.id || req.session?.userId;
-    if (!userId) return res.json([]);
+    if (!userId) return res.json([]); // 비로그인 → 조용히 빈 배열
 
     const today = new Date().toISOString().split('T')[0];
     const dayOfWeek = new Date().getDay();
@@ -121,6 +122,7 @@ router.get('/', async (req, res) => {
 // 활동 히스토리 — 기존 테이블에서 직접 조회 (activity_log 불필요)
 router.get('/history', async (req, res) => {
   try {
+    if (!req.session?.userId && !req.session?.user?.id) return res.json({ logs: [], total: 0 });
     const limit = parseInt(req.query.limit) || 50;
     const since = new Date();
     since.setDate(since.getDate() - 3); // 최근 3일
