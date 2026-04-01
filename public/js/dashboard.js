@@ -47,10 +47,13 @@ async function renderDashboard() {
       <p class="welcome-sub">${formatDateKo(today)} · ${['일','월','화','수','목','금','토'][dayOfWeek]}요일</p>
     </div>
 
-    <!-- 부산 날씨 (Open-Meteo 비동기 로드) -->
+    <!-- 부산 날씨 -->
     <div id="weather-widget" class="weather-widget-wrap">
       <div class="weather-loading">🌤️ 날씨 불러오는 중...</div>
     </div>
+
+    <!-- 다가오는 연구소 일정 -->
+    <div id="upcoming-events-widget"></div>
 
     ${upcomingAlerts.length > 0 ? `
       <div style="margin-bottom:24px">
@@ -270,6 +273,7 @@ async function renderDashboard() {
 
   // 날씨 위젯 비동기 로드
   loadBusanWeather();
+  loadUpcomingEvents();
 }
 
 function renderMyTaskItem(t) {
@@ -550,5 +554,61 @@ async function loadBusanWeather() {
   } catch(e) {
     const wrap2 = document.getElementById('weather-widget');
     if (wrap2) wrap2.innerHTML = '';
+  }
+}
+
+async function loadUpcomingEvents() {
+  const wrap = document.getElementById('upcoming-events-widget');
+  if (!wrap) return;
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    const endStr = futureDate.toISOString().split('T')[0];
+
+    const events = await api.events.list({ start: today, end: endStr });
+    if (!events.length) { wrap.innerHTML = ''; return; }
+
+    // 날짜순 정렬 후 최대 5개
+    const sorted = events.sort((a, b) => a.start_date.localeCompare(b.start_date)).slice(0, 5);
+
+    const rows = sorted.map(ev => {
+      const startD = new Date(ev.start_date);
+      const mo = startD.getMonth() + 1;
+      const dy = startD.getDate();
+      const dow = ['일','월','화','수','목','금','토'][startD.getDay()];
+      const isSameDay = ev.start_date === ev.end_date;
+      const dateStr = isSameDay
+        ? `${mo}/${dy} (${dow})`
+        : `${mo}/${dy} ~ ${new Date(ev.end_date).getMonth()+1}/${new Date(ev.end_date).getDate()}`;
+      const timeStr = ev.start_time ? ev.start_time.slice(0,5) : '';
+      const catLabel = { general:'일반', research:'연구', training:'교육', external:'외부행사', holiday:'휴가', deadline:'마감' }[ev.category] || '';
+
+      return `
+        <div class="upcoming-event-item" onclick="navigateTo('calendar')">
+          <div class="upcoming-event-bar" style="background:${ev.color}"></div>
+          <div class="upcoming-event-body">
+            <div class="upcoming-event-title">${ev.title}</div>
+            <div class="upcoming-event-meta">
+              <span>${dateStr}</span>
+              ${timeStr ? `<span>${timeStr}</span>` : ''}
+              ${catLabel ? `<span class="upcoming-event-cat">${catLabel}</span>` : ''}
+              <span style="color:var(--text-tertiary)">${ev.created_name}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      <div class="upcoming-events-card">
+        <div class="upcoming-events-header">
+          <span class="upcoming-events-title">📅 다가오는 일정</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('calendar')">달력 보기 →</button>
+        </div>
+        <div class="upcoming-events-list">${rows}</div>
+      </div>`;
+  } catch(e) {
+    wrap.innerHTML = '';
   }
 }

@@ -259,6 +259,27 @@ async function initDB() {
     `);
   } catch(e) { console.error('comments/chat 테이블:', e.message); }
 
+  // 연구소 일정 테이블
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        start_time TEXT,
+        end_time TEXT,
+        all_day INTEGER DEFAULT 1,
+        color TEXT DEFAULT '#4573D2',
+        category TEXT DEFAULT 'general',
+        created_by INTEGER NOT NULL,
+        created_name TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } catch(e) { console.error('events 테이블:', e.message); }
+
   // 알림 히스토리 테이블
   try {
     await db.run(`CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, action TEXT NOT NULL, title TEXT NOT NULL, message TEXT DEFAULT '', actor_id INTEGER, actor_name TEXT DEFAULT '', target_page TEXT DEFAULT '', target_id INTEGER, is_read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);

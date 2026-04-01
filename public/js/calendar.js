@@ -10,14 +10,16 @@ async function renderCalendar() {
     <div class="page-header">
       <div>
         <h2 class="page-title">달력</h2>
-        <p class="page-subtitle">작업 · 보고서 · 회의 일정을 한눈에 확인하세요</p>
+        <p class="page-subtitle">연구소 일정 · 작업 · 회의를 한눈에 확인하세요</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <div class="cal-legend">
+          <span class="cal-legend-item"><span class="cal-dot" style="background:#F06A6A"></span>연구소 일정</span>
+          <span class="cal-legend-item"><span class="cal-dot" style="background:#AA62E3"></span>회의</span>
           <span class="cal-legend-item"><span class="cal-dot" style="background:#4573D2"></span>작업</span>
           <span class="cal-legend-item"><span class="cal-dot" style="background:#5DA283"></span>보고서</span>
-          <span class="cal-legend-item"><span class="cal-dot" style="background:#AA62E3"></span>회의</span>
         </div>
+        <button class="btn btn-primary btn-sm" onclick="openEventForm()">+ 일정 추가</button>
       </div>
     </div>
     <div class="cal-nav">
@@ -63,16 +65,17 @@ async function loadCalendarData() {
 
   const taskParams = userId ? { assignee_id: userId } : {};
 
-  const [tasks, reports, meetings] = await Promise.all([
+  const [tasks, reports, meetings, events] = await Promise.all([
     api.tasks.list(taskParams).catch(() => []),
     api.reports.list({ user_id: userId || undefined, start: startStr, end: endStr }).catch(() => []),
     api.meetings.list({}).catch(() => []),
+    api.events.list({ start: startStr, end: endStr }).catch(() => []),
   ]);
 
-  buildCalendar(tasks, reports, meetings);
+  buildCalendar(tasks, reports, meetings, events);
 }
 
-function buildCalendar(tasks, reports, meetings) {
+function buildCalendar(tasks, reports, meetings, events = []) {
   const titleEl = document.getElementById('cal-title');
   titleEl.textContent = `${calYear}년 ${calMonth + 1}월`;
 
@@ -119,6 +122,21 @@ function buildCalendar(tasks, reports, meetings) {
     meetingsByDate[m.meeting_date].push(m);
   });
 
+  // 연구소 일정을 날짜별 매핑 (기간 이벤트 포함)
+  const eventsByDate = {};
+  events.forEach(ev => {
+    const start = ev.start_date;
+    const end = ev.end_date || start;
+    let cur = new Date(start);
+    const endD = new Date(end);
+    while (cur <= endD) {
+      const ds = cur.toISOString().split('T')[0];
+      if (!eventsByDate[ds]) eventsByDate[ds] = [];
+      eventsByDate[ds].push(ev);
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
+
   // 요일 헤더
   let html = ['월', '화', '수', '목', '금', '토', '일'].map(d =>
     `<div class="cal-header">${d}</div>`
@@ -140,30 +158,32 @@ function buildCalendar(tasks, reports, meetings) {
     const dayTasks = tasksByDate[dateStr] || [];
     const dayReports = reportsByDate[dateStr] || [];
     const dayMeetings = meetingsByDate[dateStr] || [];
-    const hasEvents = dayTasks.length + dayReports.length + dayMeetings.length > 0;
+    const dayEvents = eventsByDate[dateStr] || [];
+    const totalCount = dayEvents.length + dayMeetings.length + dayTasks.length + dayReports.length;
 
     html += `
       <div class="cal-day ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}" onclick="openDayDetail('${dateStr}')">
         <div class="cal-day-num ${isToday ? 'today-num' : ''}">${d}</div>
         <div class="cal-day-events">
-          ${dayMeetings.slice(0, 2).map(m => `
-            <div class="cal-event meeting" title="${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}">
-              ${m.start_time ? m.start_time.slice(0,5) + ' ' : ''}${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}
+          ${dayEvents.slice(0, 2).map(ev => `
+            <div class="cal-event schedule" style="background:${ev.color}22;color:${ev.color};border-left:2px solid ${ev.color}" title="${ev.title}">
+              ${ev.title}
             </div>
           `).join('')}
-          ${dayTasks.slice(0, 2).map(t => `
+          ${dayMeetings.slice(0, 1).map(m => `
+            <div class="cal-event meeting" title="${m.title || '회의'}">
+              ${m.start_time ? m.start_time.slice(0,5) + ' ' : ''}${m.title || '회의'}
+            </div>
+          `).join('')}
+          ${dayTasks.slice(0, 1).map(t => `
             <div class="cal-event task ${t.isDue ? 'due' : ''}" title="${t.title}">
               ${t.isDue ? '⏰ ' : ''}${t.title}
             </div>
           `).join('')}
           ${dayReports.length > 0 ? `
-            <div class="cal-event report" title="보고서 ${dayReports.length}건">
-              보고서 ${dayReports.length}건
-            </div>
+            <div class="cal-event report" title="보고서 ${dayReports.length}건">보고서 ${dayReports.length}건</div>
           ` : ''}
-          ${(dayTasks.length + dayMeetings.length + dayReports.length) > 4 ? `
-            <div class="cal-event-more">+${dayTasks.length + dayMeetings.length + dayReports.length - 4}건</div>
-          ` : ''}
+          ${totalCount > 4 ? `<div class="cal-event-more">+${totalCount - 4}건</div>` : ''}
         </div>
       </div>
     `;
@@ -215,10 +235,11 @@ async function openDayDetail(dateStr) {
 
   const taskParams = userId ? { assignee_id: userId } : {};
 
-  const [tasks, reports, meetings] = await Promise.all([
+  const [tasks, reports, meetings, events] = await Promise.all([
     api.tasks.list(taskParams).catch(() => []),
     api.reports.list({ user_id: userId || undefined, start: dateStr, end: dateStr }).catch(() => []),
     api.meetings.list({}).catch(() => []),
+    api.events.list({ start: dateStr, end: dateStr }).catch(() => []),
   ]);
 
   // 해당 날짜의 작업 필터
@@ -240,7 +261,34 @@ async function openDayDetail(dateStr) {
 
   document.getElementById('modal').classList.add('modal-xl');
 
-  let content = `<h3 style="margin-bottom:20px;font-size:16px;color:var(--text)">${dateLabel}</h3>`;
+  const dayEvents = events.filter(ev => ev.start_date <= dateStr && ev.end_date >= dateStr);
+
+  let content = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-size:16px;color:var(--text);margin:0">${dateLabel}</h3>
+      <button class="btn btn-primary btn-sm" onclick="modal.hide();openEventForm('${dateStr}')">+ 일정 추가</button>
+    </div>`;
+
+  // 연구소 일정
+  if (dayEvents.length) {
+    content += `<div class="day-section">
+      <h4 class="day-section-title"><span class="cal-dot" style="background:#F06A6A"></span> 연구소 일정 (${dayEvents.length})</h4>
+      ${dayEvents.map(ev => `
+        <div class="day-item" style="border-left:3px solid ${ev.color};padding-left:10px">
+          <div style="flex:1">
+            <strong>${ev.title}</strong>
+            ${ev.start_time ? `<span class="text-muted" style="margin-left:8px">${ev.start_time.slice(0,5)}${ev.end_time ? ' ~ '+ev.end_time.slice(0,5) : ''}</span>` : ''}
+            ${ev.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${ev.description}</div>` : ''}
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">등록: ${ev.created_name}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-ghost btn-sm" onclick="openEventForm(null,${ev.id})">편집</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteEvent(${ev.id})">삭제</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
 
   // 회의
   if (dayMeetings.length) {
@@ -289,7 +337,7 @@ async function openDayDetail(dateStr) {
     </div>`;
   }
 
-  if (!dayMeetings.length && !dayTasks.length && !dayReports.length) {
+  if (!dayEvents.length && !dayMeetings.length && !dayTasks.length && !dayReports.length) {
     content += `<div class="empty-state" style="padding:32px"><div class="empty-icon">📅</div><p>이 날짜에 등록된 일정이 없습니다</p></div>`;
   }
 
@@ -304,4 +352,117 @@ async function openDayDetail(dateStr) {
     origHide.call(modal);
     modal.hide = origHide;
   };
+}
+
+// ── 연구소 일정 추가/편집 ────────────────────────────────────────
+const EVENT_COLORS = [
+  { label: '파랑', value: '#4573D2' },
+  { label: '빨강', value: '#F06A6A' },
+  { label: '초록', value: '#5DA283' },
+  { label: '보라', value: '#AA62E3' },
+  { label: '주황', value: '#F1BD6C' },
+  { label: '하늘', value: '#3DBFBF' },
+];
+
+const EVENT_CATEGORIES = [
+  { label: '일반', value: 'general' },
+  { label: '연구', value: 'research' },
+  { label: '교육/훈련', value: 'training' },
+  { label: '외부행사', value: 'external' },
+  { label: '휴가/휴일', value: 'holiday' },
+  { label: '마감', value: 'deadline' },
+];
+
+async function openEventForm(defaultDate, editId) {
+  let ev = null;
+  if (editId) {
+    ev = await api.events.get(editId).catch(() => null);
+    if (!ev) return;
+  }
+
+  const today = defaultDate || new Date().toISOString().split('T')[0];
+  const colorOpts = EVENT_COLORS.map(c =>
+    `<option value="${c.value}" ${(ev ? ev.color : '#4573D2') === c.value ? 'selected' : ''}>${c.label}</option>`
+  ).join('');
+  const catOpts = EVENT_CATEGORIES.map(c =>
+    `<option value="${c.value}" ${(ev ? ev.category : 'general') === c.value ? 'selected' : ''}>${c.label}</option>`
+  ).join('');
+
+  const content = `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="form-label">제목 *</label>
+        <input id="ev-title" class="form-input" placeholder="일정 제목" value="${ev ? ev.title : ''}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label class="form-label">시작일 *</label>
+          <input id="ev-start" type="date" class="form-input" value="${ev ? ev.start_date : today}">
+        </div>
+        <div>
+          <label class="form-label">종료일</label>
+          <input id="ev-end" type="date" class="form-input" value="${ev ? ev.end_date : today}">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label class="form-label">시작 시간 <span style="color:var(--text-tertiary)">(선택)</span></label>
+          <input id="ev-start-time" type="time" class="form-input" value="${ev && ev.start_time ? ev.start_time : ''}">
+        </div>
+        <div>
+          <label class="form-label">종료 시간 <span style="color:var(--text-tertiary)">(선택)</span></label>
+          <input id="ev-end-time" type="time" class="form-input" value="${ev && ev.end_time ? ev.end_time : ''}">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label class="form-label">색상</label>
+          <select id="ev-color" class="form-input">${colorOpts}</select>
+        </div>
+        <div>
+          <label class="form-label">분류</label>
+          <select id="ev-category" class="form-input">${catOpts}</select>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">메모</label>
+        <textarea id="ev-desc" class="form-input" rows="2" placeholder="상세 내용 (선택)">${ev ? ev.description : ''}</textarea>
+      </div>
+    </div>`;
+
+  modal.show(editId ? '일정 편집' : '일정 추가', content,
+    `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
+     <button class="btn btn-primary" onclick="saveEvent(${editId || 'null'})">${editId ? '저장' : '추가'}</button>`
+  );
+}
+
+async function saveEvent(editId) {
+  const title = document.getElementById('ev-title')?.value.trim();
+  const start = document.getElementById('ev-start')?.value;
+  if (!title || !start) { alert('제목과 시작일을 입력하세요'); return; }
+  const data = {
+    title,
+    start_date: start,
+    end_date: document.getElementById('ev-end')?.value || start,
+    start_time: document.getElementById('ev-start-time')?.value || null,
+    end_time: document.getElementById('ev-end-time')?.value || null,
+    color: document.getElementById('ev-color')?.value || '#4573D2',
+    category: document.getElementById('ev-category')?.value || 'general',
+    description: document.getElementById('ev-desc')?.value.trim() || '',
+  };
+  try {
+    if (editId) { await api.events.update(editId, data); }
+    else { await api.events.create(data); }
+    modal.hide();
+    loadCalendarData();
+  } catch (e) { alert('저장 실패: ' + e.message); }
+}
+
+async function deleteEvent(id) {
+  if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+  try {
+    await api.events.delete(id);
+    modal.hide();
+    loadCalendarData();
+  } catch (e) { alert('삭제 실패: ' + e.message); }
 }

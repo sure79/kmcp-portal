@@ -125,5 +125,12 @@ const api = {
     history: () => api.get('/api/chat'),
     send: (content) => api.post('/api/chat', { content }),
   },
+  events: {
+    list: (p) => api.get(`/api/events?${new URLSearchParams(p||{})}`),
+    get: (id) => api.get(`/api/events/${id}`),
+    create: (d) => api.post('/api/events', d),
+    update: (id, d) => api.put(`/api/events/${id}`, d),
+    delete: (id) => api.delete(`/api/events/${id}`),
+  },
   search: (q) => api.get(`/api/search?q=${encodeURIComponent(q)}`),
 };
