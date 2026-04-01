@@ -1356,6 +1356,131 @@ body {
   .chat-fab { bottom: 16px; right: 16px; }
 }
 
+/* ===== 날씨 위젯 ===== */
+.weather-widget-wrap {
+  margin-bottom: 20px;
+}
+.weather-loading {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 8px 0;
+}
+.weather-card {
+  background: linear-gradient(135deg, #1a6bb5 0%, #2196f3 50%, #4fc3f7 100%);
+  border-radius: 16px;
+  padding: 16px 20px;
+  color: #fff;
+  overflow: hidden;
+}
+.weather-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.weather-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.95;
+}
+.weather-location-icon { font-size: 14px; }
+.weather-today-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.weather-today-icon { font-size: 32px; line-height: 1; }
+.weather-today-temp {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.weather-today-desc {
+  font-size: 12px;
+  opacity: 0.9;
+  display: block;
+  margin-top: 2px;
+}
+.weather-wind {
+  font-size: 11px;
+  opacity: 0.8;
+  display: block;
+  margin-top: 2px;
+}
+.weather-source {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-left: auto;
+  align-self: flex-end;
+}
+.weather-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.weather-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  cursor: default;
+  transition: background 0.15s;
+}
+.weather-day:hover { background: rgba(255,255,255,0.25); }
+.weather-day-today {
+  background: rgba(255,255,255,0.35) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.weather-day-label {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+.weather-day-date {
+  font-size: 10px;
+  opacity: 0.7;
+}
+.weather-day-icon { font-size: 22px; line-height: 1; margin: 2px 0; }
+.weather-day-desc {
+  font-size: 10px;
+  opacity: 0.85;
+  text-align: center;
+  line-height: 1.2;
+}
+.weather-day-temp {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  margin-top: 2px;
+}
+.weather-temp-high {
+  font-size: 13px;
+  font-weight: 800;
+}
+.weather-temp-low {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.weather-day-rain {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+@media (max-width: 600px) {
+  .weather-week { grid-template-columns: repeat(4, 1fr); }
+  .weather-week .weather-day:nth-child(n+5) { display: none; }
+  .weather-today-icon { font-size: 26px; }
+  .weather-today-temp { font-size: 18px; }
+}
+
 /* ===== 댓글 (Comments) ===== */
 .comments-section {
   margin-top: 16px;

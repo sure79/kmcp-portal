@@ -47,6 +47,11 @@ async function renderDashboard() {
       <p class="welcome-sub">${formatDateKo(today)} · ${['일','월','화','수','목','금','토'][dayOfWeek]}요일</p>
     </div>
 
+    <!-- 부산 날씨 (Open-Meteo 비동기 로드) -->
+    <div id="weather-widget" class="weather-widget-wrap">
+      <div class="weather-loading">🌤️ 날씨 불러오는 중...</div>
+    </div>
+
     ${upcomingAlerts.length > 0 ? `
       <div style="margin-bottom:24px">
         ${upcomingAlerts.map(a => `
@@ -239,7 +244,7 @@ async function renderDashboard() {
     ` : ''}
 
     <!-- 팀 보고 현황 -->
-    <div class="card mt-16">
+    <div class="card mt-16" id="team-report-section">
       <div class="card-header">
         <div class="card-title">오늘 팀 보고 현황 (${todayReports}명 제출)</div>
         <button class="btn btn-ghost btn-sm" onclick="navigateTo('team')">전체 보기 →</button>
@@ -262,6 +267,9 @@ async function renderDashboard() {
       </div>`}
     </div>
   `;
+
+  // 날씨 위젯 비동기 로드
+  loadBusanWeather();
 }
 
 function renderMyTaskItem(t) {
@@ -420,4 +428,106 @@ async function saveLunchPoll() {
     if (window._socket) window._socket.emit('lunch:created', { name: window._currentUser?.name });
     renderDashboard();
   } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===== 부산 날씨 (Open-Meteo API — 무료, API 키 불필요) =====
+const WMO_CODE = {
+  0:  { icon: '☀️', label: '맑음' },
+  1:  { icon: '🌤️', label: '대체로 맑음' },
+  2:  { icon: '⛅', label: '구름 조금' },
+  3:  { icon: '☁️', label: '흐림' },
+  45: { icon: '🌫️', label: '안개' },
+  48: { icon: '🌫️', label: '안개' },
+  51: { icon: '🌦️', label: '이슬비' },
+  53: { icon: '🌦️', label: '이슬비' },
+  55: { icon: '🌦️', label: '이슬비' },
+  61: { icon: '🌧️', label: '비' },
+  63: { icon: '🌧️', label: '비' },
+  65: { icon: '🌧️', label: '강한 비' },
+  71: { icon: '❄️', label: '눈' },
+  73: { icon: '❄️', label: '눈' },
+  75: { icon: '❄️', label: '강설' },
+  77: { icon: '🌨️', label: '눈보라' },
+  80: { icon: '🌦️', label: '소나기' },
+  81: { icon: '🌧️', label: '소나기' },
+  82: { icon: '⛈️', label: '강한 소나기' },
+  85: { icon: '🌨️', label: '눈 소나기' },
+  86: { icon: '🌨️', label: '눈 소나기' },
+  95: { icon: '⛈️', label: '뇌우' },
+  96: { icon: '⛈️', label: '뇌우+우박' },
+  99: { icon: '⛈️', label: '뇌우+우박' },
+};
+
+const WEEK_DAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
+
+async function loadBusanWeather() {
+  const wrap = document.getElementById('weather-widget');
+  if (!wrap) return;
+
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=35.1796&longitude=129.0756' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max' +
+      '&timezone=Asia%2FSeoul&forecast_days=7';
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('날씨 API 오류');
+    const data = await res.json();
+    const d = data.daily;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const cards = d.time.map((dateStr, i) => {
+      const wmo = WMO_CODE[d.weather_code[i]] || WMO_CODE[0];
+      const date = new Date(dateStr);
+      const dayName = WEEK_DAYS_KO[date.getDay()];
+      const isToday = dateStr === today;
+      const rain = d.precipitation_sum[i] || 0;
+      const wind = d.wind_speed_10m_max[i] || 0;
+      const mo = date.getMonth() + 1;
+      const day = date.getDate();
+
+      return `
+        <div class="weather-day ${isToday ? 'weather-day-today' : ''}">
+          <div class="weather-day-label">${isToday ? '오늘' : dayName}요일</div>
+          <div class="weather-day-date">${mo}/${day}</div>
+          <div class="weather-day-icon">${wmo.icon}</div>
+          <div class="weather-day-desc">${wmo.label}</div>
+          <div class="weather-day-temp">
+            <span class="weather-temp-high">${Math.round(d.temperature_2m_max[i])}°</span>
+            <span class="weather-temp-low">${Math.round(d.temperature_2m_min[i])}°</span>
+          </div>
+          ${rain > 0.1 ? `<div class="weather-day-rain">💧 ${rain.toFixed(1)}mm</div>` : '<div class="weather-day-rain" style="opacity:0">-</div>'}
+        </div>`;
+    }).join('');
+
+    const todayIdx = 0;
+    const todayWmo = WMO_CODE[d.weather_code[todayIdx]] || WMO_CODE[0];
+    const todayHigh = Math.round(d.temperature_2m_max[todayIdx]);
+    const todayLow = Math.round(d.temperature_2m_min[todayIdx]);
+    const todayWind = d.wind_speed_10m_max[todayIdx];
+
+    wrap.innerHTML = `
+      <div class="weather-card">
+        <div class="weather-header">
+          <div class="weather-location">
+            <span class="weather-location-icon">📍</span>
+            <span>부산 날씨</span>
+          </div>
+          <div class="weather-today-summary">
+            <span class="weather-today-icon">${todayWmo.icon}</span>
+            <div>
+              <span class="weather-today-temp">${todayHigh}° / ${todayLow}°</span>
+              <span class="weather-today-desc">${todayWmo.label}</span>
+              ${todayWind > 10 ? `<span class="weather-wind">💨 ${Math.round(todayWind)}km/h</span>` : ''}
+            </div>
+          </div>
+          <div class="weather-source">Open-Meteo</div>
+        </div>
+        <div class="weather-week">${cards}</div>
+      </div>`;
+  } catch(e) {
+    const wrap2 = document.getElementById('weather-widget');
+    if (wrap2) wrap2.innerHTML = '';  // 오류 시 조용히 숨김
+  }
 }
