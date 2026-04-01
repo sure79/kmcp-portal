@@ -98,7 +98,26 @@ async function openMeetingForm(meetingId) {
 
   modal.show(
     meetingId ? '회의 수정' : '새 회의 등록',
-    `<div class="form-row">
+    `<!-- AI 녹음 자동 작성 -->
+     <div class="ai-record-box" id="ai-record-box">
+       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+         <span style="font-size:18px">🎙️</span>
+         <div>
+           <div style="font-weight:600;font-size:14px">녹음 파일로 회의록 자동 작성</div>
+           <div style="font-size:12px;color:var(--text-secondary)">핸드폰 녹음 파일을 업로드하면 AI가 회의록을 자동으로 정리합니다</div>
+         </div>
+         <label class="btn btn-coral btn-sm" style="cursor:pointer;margin-left:auto">
+           파일 선택
+           <input type="file" id="m-audio-file" accept=".mp3,.m4a,.mp4,.wav,.ogg,.aac,.webm,.flac" style="display:none" onchange="transcribeAudio(this)">
+         </label>
+       </div>
+       <div id="ai-progress" style="display:none;margin-top:12px">
+         <div class="ai-progress-bar"><div class="ai-progress-fill"></div></div>
+         <div id="ai-status" style="font-size:12px;color:var(--text-secondary);margin-top:6px;text-align:center">AI가 분석 중입니다...</div>
+       </div>
+     </div>
+
+     <div class="form-row">
        <div class="form-group"><label>회의 유형 *</label>
          <select id="m-type">
            <option value="weekly" ${meeting?.type=='weekly'||!meeting?'selected':''}>주간회의</option>
@@ -113,7 +132,7 @@ async function openMeetingForm(meetingId) {
      </div>
      <div class="form-group"><label>회의 제목</label><input type="text" id="m-title" value="${meeting?.title||''}" placeholder="예: 3월 2주차 주간회의"></div>
      <div class="form-group"><label>안건</label><textarea id="m-agenda" rows="3" placeholder="회의 안건을 입력하세요">${meeting?.agenda||''}</textarea></div>
-     <div class="form-group"><label>회의록</label><textarea id="m-minutes" rows="5" placeholder="회의 내용을 기록하세요 (나중에 녹음 기능 추가 예정)">${meeting?.minutes||''}</textarea></div>
+     <div class="form-group"><label>회의록</label><textarea id="m-minutes" rows="5" placeholder="직접 입력하거나 위 녹음 파일 업로드를 사용하세요">${meeting?.minutes||''}</textarea></div>
      <div class="form-group"><label>결정사항</label><textarea id="m-decisions" rows="3" placeholder="회의에서 결정된 사항을 입력하세요">${meeting?.decisions||''}</textarea></div>
      <div class="form-group">
        <label>참석자</label>
@@ -137,6 +156,51 @@ async function openMeetingForm(meetingId) {
     origHide.call(modal);
     modal.hide = origHide;
   };
+}
+
+async function transcribeAudio(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+  const progress = document.getElementById('ai-progress');
+  const status = document.getElementById('ai-status');
+
+  progress.style.display = 'block';
+  status.textContent = `파일 업로드 중... (${sizeMB}MB)`;
+
+  // 폼 입력 잠금
+  ['m-title','m-agenda','m-minutes','m-decisions'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = true;
+  });
+
+  try {
+    status.textContent = 'Google AI가 녹음을 분석 중입니다... (파일 크기에 따라 1~3분 소요)';
+    const result = await api.transcribe.audio(file);
+    const d = result.data;
+
+    // 폼 자동 입력
+    if (d.title) document.getElementById('m-title').value = d.title;
+    if (d.agenda) document.getElementById('m-agenda').value = d.agenda;
+    if (d.minutes) document.getElementById('m-minutes').value = d.minutes;
+    if (d.decisions) document.getElementById('m-decisions').value = d.decisions;
+
+    progress.style.display = 'none';
+    document.getElementById('ai-record-box').style.background = 'var(--green-light)';
+    document.getElementById('ai-record-box').style.borderColor = 'var(--green)';
+    document.getElementById('ai-record-box').querySelector('div > div > div').textContent = '✅ AI 분석 완료 — 내용을 확인하고 필요시 수정하세요';
+
+    toast('회의록이 자동으로 작성되었습니다!', 'success');
+  } catch (e) {
+    progress.style.display = 'none';
+    toast('분석 실패: ' + e.message, 'error');
+  } finally {
+    ['m-title','m-agenda','m-minutes','m-decisions'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = false;
+    });
+  }
 }
 
 async function saveMeeting(meetingId) {
@@ -221,9 +285,6 @@ async function viewMeeting(id) {
         </div>
       ` : ''}
 
-      <div class="meeting-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-        <p style="font-size:12px;color:var(--text-tertiary)">🎤 녹음 기능은 추후 업데이트 예정입니다</p>
-      </div>
     </div>`,
     `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
      <button class="btn btn-coral" onclick="modal.hide();openMeetingForm(${id})">수정</button>`

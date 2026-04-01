@@ -839,6 +839,24 @@ body {
   border-left: 3px solid var(--blue); min-height: 60px;
 }
 
+/* ===== AI 녹음 박스 ===== */
+.ai-record-box {
+  background: var(--blue-light); border: 1.5px dashed var(--blue);
+  border-radius: var(--radius-lg); padding: 16px; margin-bottom: 18px;
+  transition: all 0.3s ease;
+}
+.ai-progress-bar {
+  height: 6px; background: var(--border); border-radius: 99px; overflow: hidden;
+}
+.ai-progress-fill {
+  height: 100%; width: 100%; background: linear-gradient(90deg, var(--blue), var(--coral));
+  border-radius: 99px; animation: progress-slide 2s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* ===== 달력 ===== */
 .cal-nav {
   display: flex; align-items: center; gap: 8px; margin-bottom: 16px;

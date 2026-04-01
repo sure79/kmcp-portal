@@ -42,6 +42,16 @@ const api = {
     delete: (id) => api.delete(`/api/meetings/${id}`),
     confirm: (id, userId) => api.post(`/api/meetings/${id}/confirm`, { user_id: userId }),
   },
+  transcribe: {
+    audio: async (file) => {
+      const form = new FormData();
+      form.append('audio', file);
+      const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '분석 실패');
+      return json;
+    },
+  },
   tasks: {
     list: (p) => api.get(`/api/tasks?${new URLSearchParams(p||{})}`),
     get: (id) => api.get(`/api/tasks/${id}`),
