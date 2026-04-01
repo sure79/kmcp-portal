@@ -148,6 +148,11 @@ process.on('unhandledRejection', (reason) => {
 const PORT = process.env.PORT || 3000;
 
 db.init().then(() => {
+  // 음성 분석 등 장시간 요청을 위해 타임아웃 15분으로 설정
+  server.timeout = 15 * 60 * 1000;        // 15분
+  server.keepAliveTimeout = 15 * 60 * 1000;
+  server.headersTimeout = 15 * 60 * 1000 + 1000;
+
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n========================================`);
     console.log(`  KMCP 연구소 업무포털`);
