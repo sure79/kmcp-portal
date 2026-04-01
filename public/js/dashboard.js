@@ -467,7 +467,13 @@ async function loadBusanWeather() {
   try {
     const url = 'https://api.open-meteo.com/v1/forecast' +
       '?latitude=35.1796&longitude=129.0756' +
-      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max' +
+      '&daily=weather_code' +
+      ',temperature_2m_max,temperature_2m_min' +
+      ',apparent_temperature_max,apparent_temperature_min' +
+      ',precipitation_sum,precipitation_probability_max' +
+      ',wind_speed_10m_max,wind_gusts_10m_max' +
+      ',relative_humidity_2m_max,relative_humidity_2m_min' +
+      ',uv_index_max,sunshine_duration' +
       '&timezone=Asia%2FSeoul&forecast_days=7';
 
     const res = await fetch(url);
@@ -476,58 +482,142 @@ async function loadBusanWeather() {
     const d = data.daily;
 
     const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
 
+    // 오늘 요약 (index 0)
+    const t = 0;
+    const todayWmo = WMO_CODE[d.weather_code[t]] || WMO_CODE[0];
+    const todayHigh    = Math.round(d.temperature_2m_max[t]);
+    const todayLow     = Math.round(d.temperature_2m_min[t]);
+    const todayFeel    = Math.round((d.apparent_temperature_max[t] + d.apparent_temperature_min[t]) / 2);
+    const todayRain    = (d.precipitation_sum[t] || 0).toFixed(1);
+    const todayRainPct = d.precipitation_probability_max[t] || 0;
+    const todayWind    = Math.round(d.wind_speed_10m_max[t] || 0);
+    const todayGust    = Math.round(d.wind_gusts_10m_max[t] || 0);
+    const todayHumid   = Math.round((d.relative_humidity_2m_max[t] + d.relative_humidity_2m_min[t]) / 2);
+    const todayUV      = (d.uv_index_max[t] || 0).toFixed(1);
+    const todaySun     = d.sunshine_duration[t] ? Math.round(d.sunshine_duration[t] / 3600) : 0;
+
+    // UV 등급
+    function uvLevel(uv) {
+      if (uv < 3) return { label: '낮음', color: '#4caf50' };
+      if (uv < 6) return { label: '보통', color: '#f1bd6c' };
+      if (uv < 8) return { label: '높음', color: '#ff9800' };
+      if (uv < 11) return { label: '매우높음', color: '#f44336' };
+      return { label: '위험', color: '#9c27b0' };
+    }
+    const uvInfo = uvLevel(parseFloat(todayUV));
+
+    // 강수 확률 색상
+    function rainColor(pct) {
+      if (pct >= 70) return '#2196f3';
+      if (pct >= 40) return '#64b5f6';
+      return 'rgba(255,255,255,0.7)';
+    }
+
+    // 7일 카드
     const cards = d.time.map((dateStr, i) => {
-      const wmo = WMO_CODE[d.weather_code[i]] || WMO_CODE[0];
-      const date = new Date(dateStr);
-      const dayName = WEEK_DAYS_KO[date.getDay()];
-      const isToday = dateStr === today;
-      const rain = d.precipitation_sum[i] || 0;
-      const wind = d.wind_speed_10m_max[i] || 0;
+      const wmo    = WMO_CODE[d.weather_code[i]] || WMO_CODE[0];
+      const date   = new Date(dateStr);
+      const dayName = i === 0 ? '오늘' : (i === 1 ? '내일' : WEEK_DAYS_KO[date.getDay()]+'요일');
+      const isToday = i === 0;
+      const rain   = (d.precipitation_sum[i] || 0).toFixed(1);
+      const rainPct = d.precipitation_probability_max[i] || 0;
+      const high   = Math.round(d.temperature_2m_max[i]);
+      const low    = Math.round(d.temperature_2m_min[i]);
       const mo = date.getMonth() + 1;
       const day = date.getDate();
+      const hasRain = parseFloat(rain) > 0.1 || rainPct >= 20;
 
       return `
-        <div class="weather-day ${isToday ? 'weather-day-today' : ''}">
-          <div class="weather-day-label">${isToday ? '오늘' : dayName}요일</div>
+        <div class="weather-day ${isToday ? 'weather-day-today' : ''} ${hasRain ? 'weather-day-rainy' : ''}">
+          <div class="weather-day-label">${dayName}</div>
           <div class="weather-day-date">${mo}/${day}</div>
           <div class="weather-day-icon">${wmo.icon}</div>
           <div class="weather-day-desc">${wmo.label}</div>
           <div class="weather-day-temp">
-            <span class="weather-temp-high">${Math.round(d.temperature_2m_max[i])}°</span>
-            <span class="weather-temp-low">${Math.round(d.temperature_2m_min[i])}°</span>
+            <span class="weather-temp-high">${high}°</span>
+            <span class="weather-temp-sep">/</span>
+            <span class="weather-temp-low">${low}°</span>
           </div>
-          ${rain > 0.1 ? `<div class="weather-day-rain">💧 ${rain.toFixed(1)}mm</div>` : '<div class="weather-day-rain" style="opacity:0">-</div>'}
+          <div class="weather-rain-prob" style="color:${rainColor(rainPct)}">
+            💧 ${rainPct}%
+          </div>
+          ${parseFloat(rain) > 0.1 ? `<div class="weather-day-rainamt">${rain}mm</div>` : '<div class="weather-day-rainamt" style="opacity:0">-</div>'}
         </div>`;
     }).join('');
 
-    const todayIdx = 0;
-    const todayWmo = WMO_CODE[d.weather_code[todayIdx]] || WMO_CODE[0];
-    const todayHigh = Math.round(d.temperature_2m_max[todayIdx]);
-    const todayLow = Math.round(d.temperature_2m_min[todayIdx]);
-    const todayWind = d.wind_speed_10m_max[todayIdx];
-
     wrap.innerHTML = `
       <div class="weather-card">
-        <div class="weather-header">
-          <div class="weather-location">
-            <span class="weather-location-icon">📍</span>
-            <span>부산 날씨</span>
-          </div>
-          <div class="weather-today-summary">
-            <span class="weather-today-icon">${todayWmo.icon}</span>
+        <!-- 헤더: 위치 + 타이틀 -->
+        <div class="weather-top-bar">
+          <span class="weather-location-tag">📍 부산 날씨</span>
+          <span class="weather-update-time">${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 업데이트</span>
+          <span class="weather-source-tag">Open-Meteo</span>
+        </div>
+
+        <!-- 오늘 상세 요약 -->
+        <div class="weather-today-row">
+          <div class="weather-today-left">
+            <div class="weather-today-icon-big">${todayWmo.icon}</div>
             <div>
-              <span class="weather-today-temp">${todayHigh}° / ${todayLow}°</span>
-              <span class="weather-today-desc">${todayWmo.label}</span>
-              ${todayWind > 10 ? `<span class="weather-wind">💨 ${Math.round(todayWind)}km/h</span>` : ''}
+              <div class="weather-today-temp-big">${todayHigh}° <span class="weather-today-low-big">/ ${todayLow}°</span></div>
+              <div class="weather-today-feel">체감 ${todayFeel}°</div>
+              <div class="weather-today-label">${todayWmo.label}</div>
             </div>
           </div>
-          <div class="weather-source">Open-Meteo</div>
+          <div class="weather-today-stats">
+            <div class="weather-stat">
+              <span class="weather-stat-icon">💧</span>
+              <div>
+                <div class="weather-stat-value" style="color:${rainColor(todayRainPct)}">${todayRainPct}%</div>
+                <div class="weather-stat-label">강수 확률</div>
+              </div>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-icon">🌧️</span>
+              <div>
+                <div class="weather-stat-value">${todayRain}mm</div>
+                <div class="weather-stat-label">강수량</div>
+              </div>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-icon">💨</span>
+              <div>
+                <div class="weather-stat-value">${todayWind}<span style="font-size:10px">km/h</span></div>
+                <div class="weather-stat-label">풍속 (돌풍 ${todayGust})</div>
+              </div>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-icon">💦</span>
+              <div>
+                <div class="weather-stat-value">${todayHumid}%</div>
+                <div class="weather-stat-label">습도</div>
+              </div>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-icon">🔆</span>
+              <div>
+                <div class="weather-stat-value" style="color:${uvInfo.color}">${todayUV}</div>
+                <div class="weather-stat-label">UV (${uvInfo.label})</div>
+              </div>
+            </div>
+            <div class="weather-stat">
+              <span class="weather-stat-icon">☀️</span>
+              <div>
+                <div class="weather-stat-value">${todaySun}h</div>
+                <div class="weather-stat-label">일조 시간</div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- 7일 예보 -->
+        <div class="weather-week-label">7일 예보</div>
         <div class="weather-week">${cards}</div>
       </div>`;
   } catch(e) {
     const wrap2 = document.getElementById('weather-widget');
-    if (wrap2) wrap2.innerHTML = '';  // 오류 시 조용히 숨김
+    if (wrap2) wrap2.innerHTML = '';
   }
 }
