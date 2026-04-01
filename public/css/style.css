@@ -1467,7 +1467,7 @@ body {
 /* 7일 예보 */
 .weather-week {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(10, 1fr);
 }
 .weather-day {
   display: flex;
@@ -1518,7 +1518,11 @@ body {
   .weather-today-stats { gap: 10px; }
   .weather-today-temp { font-size: 22px; }
 }
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .weather-week { grid-template-columns: repeat(5, 1fr); }
+  .weather-week .weather-day:nth-child(n+6) { display: none; }
+}
+@media (max-width: 500px) {
   .weather-week { grid-template-columns: repeat(4, 1fr); }
   .weather-week .weather-day:nth-child(n+5) { display: none; }
 }

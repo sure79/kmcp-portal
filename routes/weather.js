@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 
+// 10분 서버 캐시
+let _cache = null;
+let _cacheTime = 0;
+const CACHE_TTL = 10 * 60 * 1000;
+
 const NX = 98, NY = 76;
 const MID_LAND_REGION = '11H20000';
 const MID_TA_REGION   = '11H20201';
@@ -153,6 +158,11 @@ router.get('/', async (req, res) => {
   const apiKey = process.env.WEATHER_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'NO_API_KEY' });
 
+  // 캐시 확인
+  if (_cache && Date.now() - _cacheTime < CACHE_TTL) {
+    return res.json(_cache);
+  }
+
   try {
     const { baseDate, baseTime } = calcShortBase();
     const { tmFc, midStart }     = calcMidTmFc();
@@ -230,7 +240,7 @@ router.get('/', async (req, res) => {
     const midLand = midLandJson.response?.body?.items?.item?.[0] || {};
     const midTa   = midTaJson.response?.body?.items?.item?.[0]   || {};
     const midForecast = [];
-    for (let offset = effectiveMidStart; offset <= midStart + 3; offset++) {
+    for (let offset = effectiveMidStart; offset <= 10; offset++) {
       const rainAm = Number(midLand[`rnSt${offset}Am`] ?? midLand[`rnSt${offset}`] ?? 0);
       const rainPm = Number(midLand[`rnSt${offset}Pm`] ?? midLand[`rnSt${offset}`] ?? 0);
       const wfAm   = midLand[`wf${offset}Am`] ?? midLand[`wf${offset}`] ?? '';
@@ -253,14 +263,17 @@ router.get('/', async (req, res) => {
       });
     }
 
-    const forecast = [...shortForecast, ...midForecast].slice(0, 7);
+    const forecast = [...shortForecast, ...midForecast].slice(0, 10);
     console.log(`[날씨] 성공: 단기 ${shortForecast.length}일 + 중기 ${midForecast.length}일`);
-    res.json({
+    const result = {
       forecast,
       updated: new Date().toISOString(),
       source: 'kma',
       ...(shortError ? { warning: '단기예보 미신청 — 공공데이터포털에서 VilageFcstInfoService_2.0 활용신청 필요' } : {}),
-    });
+    };
+    _cache = result;
+    _cacheTime = Date.now();
+    res.json(result);
 
   } catch(e) {
     console.error('[날씨] 오류:', e.message);
