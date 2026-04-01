@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
+const { requireLogin } = require('../middleware/auth');
+
+router.use(requireLogin);
 
 // 사용자별 알림 목록 조회
 router.get('/', async (req, res) => {

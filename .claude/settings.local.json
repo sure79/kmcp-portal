@@ -5,7 +5,8 @@
       "Bash(node -e \":*)",
       "Bash(node -e \"const db = require\\(''./database/db''\\); const notif = require\\(''./routes/notifications''\\); console.log\\(''All modules OK''\\);\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git -C \"c:/Users/User/Downloads/업무보고서\" add database/db.js routes/notices.js routes/reports.js routes/tasks.js routes/meetings.js routes/projects.js routes/suggestions.js routes/polls.js)"
     ]
   }
 }

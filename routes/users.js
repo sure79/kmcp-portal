@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
 const bcrypt = require('bcryptjs');
+const { requireLogin, requireAdmin } = require('../middleware/auth');
 
 // 전체 사용자 목록 (승인된 사용자만, 관리자는 전체)
 router.get('/', async (req, res) => {
@@ -15,8 +16,8 @@ router.get('/', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// 승인 대기 목록
-router.get('/pending', async (req, res) => {
+// 승인 대기 목록 (관리자 전용)
+router.get('/pending', requireAdmin, async (req, res) => {
   try {
     const users = await db.all('SELECT id, name, department, position, username, created_at FROM users WHERE is_approved = 0 ORDER BY created_at DESC');
     res.json(users);
@@ -43,7 +44,7 @@ router.post('/register', async (req, res) => {
 });
 
 // 관리자: 승인
-router.post('/:id/approve', async (req, res) => {
+router.post('/:id/approve', requireAdmin, async (req, res) => {
   try {
     await db.run('UPDATE users SET is_approved = 1 WHERE id = ?', req.params.id);
     res.json({ success: true });
@@ -51,7 +52,7 @@ router.post('/:id/approve', async (req, res) => {
 });
 
 // 관리자: 거절 (삭제)
-router.post('/:id/reject', async (req, res) => {
+router.post('/:id/reject', requireAdmin, async (req, res) => {
   try {
     await db.run('DELETE FROM users WHERE id = ? AND is_approved = 0', req.params.id);
     res.json({ success: true });
@@ -59,7 +60,7 @@ router.post('/:id/reject', async (req, res) => {
 });
 
 // 사용자 추가 (관리자가 직접 추가 - 바로 승인)
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const { name, department, position, username, password, is_admin } = req.body;
     if (!name || !username || !password) return res.status(400).json({ error: '이름, 아이디, 비밀번호는 필수입니다.' });
@@ -76,7 +77,7 @@ router.post('/', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { name, department, position, password, is_admin } = req.body;
     const user = await db.get('SELECT id FROM users WHERE id = ?', req.params.id);
@@ -94,7 +95,7 @@ router.put('/:id', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     await db.run('DELETE FROM users WHERE id = ?', req.params.id);
     res.json({ success: true });

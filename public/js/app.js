@@ -177,102 +177,104 @@ function initApp(user) {
 }
 
 // ===== 알림 시스템 =====
-async function loadNotifications() {
-  try {
-    const [notifs, historyRes] = await Promise.all([
-      api.notifications.list().catch(() => []),
-      api.notifications.history({ limit: 5 }).catch(() => ({ logs: [] })),
-    ]);
-    const badge = document.getElementById('notif-badge');
-    const totalCount = notifs.length + (historyRes.logs ? historyRes.logs.length : 0);
-    if (totalCount > 0) {
-      badge.textContent = notifs.length > 0 ? notifs.length : historyRes.logs.length;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
-    window._notifications = notifs;
-  } catch (e) {}
-}
+const NOTIF_ICONS = { report: '📝', task: '📌', meeting: '📋', notice: '📢', project: '📁', suggestion: '💡', poll: '📊' };
 
-let notifTab = 'alerts';
-
-function toggleNotifications() {
-  const dd = document.getElementById('notif-dropdown');
-  const isOpen = dd.style.display !== 'none';
-  if (isOpen) { closeNotifications(); return; }
-  notifTab = 'alerts';
-  renderNotifDropdown();
-  dd.style.display = 'block';
-}
-
-async function renderNotifDropdown() {
-  const list = document.getElementById('notif-list');
-  const header = document.querySelector('.notif-header');
-
-  // 탭 헤더 (알림/히스토리)
-  header.innerHTML = `
-    <div style="display:flex;gap:0">
-      <button class="btn btn-sm ${notifTab === 'alerts' ? 'btn-secondary' : 'btn-ghost'}" onclick="notifTab='alerts';renderNotifDropdown()" style="border-radius:6px 0 0 6px">알림</button>
-      <button class="btn btn-sm ${notifTab === 'history' ? 'btn-secondary' : 'btn-ghost'}" onclick="notifTab='history';renderNotifDropdown()" style="border-radius:0 6px 6px 0">활동 기록</button>
-    </div>
-    <button class="btn btn-ghost btn-sm" onclick="closeNotifications()">닫기</button>
-  `;
-
-  if (notifTab === 'alerts') {
-    const notifs = window._notifications || [];
-    if (notifs.length === 0) {
-      list.innerHTML = '<div class="notif-empty">새로운 알림이 없습니다</div>';
-    } else {
-      list.innerHTML = notifs.map(n => `
-        <div class="notif-item notif-${n.type}" onclick="closeNotifications();navigateTo('${n.action}')">
-          <div class="notif-icon">${n.icon}</div>
-          <div class="notif-content">
-            <div class="notif-title">${n.title}</div>
-            <div class="notif-msg">${n.message}</div>
-          </div>
-        </div>
-      `).join('');
-    }
-  } else {
-    // 히스토리 탭
-    list.innerHTML = '<div class="notif-empty">불러오는 중...</div>';
-    try {
-      const { logs } = await api.notifications.history({ limit: 30 });
-      if (!logs || logs.length === 0) {
-        list.innerHTML = '<div class="notif-empty">활동 기록이 없습니다</div>';
-        return;
-      }
-      const icons = { report: '📝', task: '📌', meeting: '📋', notice: '📢', project: '📁', suggestion: '💡', poll: '📊' };
-      list.innerHTML = logs.map(l => {
-        const icon = icons[l.type] || '🔔';
-        const time = getActivityTimeAgo(l.created_at);
-        return `
-          <div class="notif-item ${l.is_read ? '' : 'notif-unread'}" onclick="closeNotifications();${l.target_page ? `navigateTo('${l.target_page}')` : ''}">
-            <div class="notif-icon">${icon}</div>
-            <div class="notif-content">
-              <div class="notif-title">${l.title}</div>
-              <div class="notif-msg">${l.actor_name ? l.actor_name + ' · ' : ''}${time}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      // 읽음 처리
-      api.notifications.readAll().catch(() => {});
-    } catch(e) {
-      list.innerHTML = '<div class="notif-empty">불러오기 실패</div>';
-    }
-  }
-}
-
-function getActivityTimeAgo(dateStr) {
+function getTimeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
   if (diff < 60) return '방금';
   if (diff < 3600) return `${Math.floor(diff/60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`;
   if (diff < 604800) return `${Math.floor(diff/86400)}일 전`;
-  return dateStr.split('T')[0];
+  return dateStr.slice(0, 10);
+}
+
+// 배지 업데이트 (주기적 호출)
+async function loadNotifications() {
+  try {
+    const notifs = await api.notifications.list().catch(() => []);
+    window._notifications = notifs;
+    const badge = document.getElementById('notif-badge');
+    if (notifs.length > 0) {
+      badge.textContent = notifs.length;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function toggleNotifications() {
+  const dd = document.getElementById('notif-dropdown');
+  if (dd.style.display !== 'none') {
+    closeNotifications();
+    return;
+  }
+  dd.style.display = 'block';
+  switchNotifTab('alerts');
+}
+
+function switchNotifTab(tab) {
+  // 탭 버튼 스타일
+  document.getElementById('tab-btn-alerts').className = 'btn btn-sm ' + (tab === 'alerts' ? 'btn-secondary' : 'btn-ghost');
+  document.getElementById('tab-btn-history').className = 'btn btn-sm ' + (tab === 'history' ? 'btn-secondary' : 'btn-ghost');
+
+  // 패널 표시
+  document.getElementById('notif-tab-alerts').style.display = tab === 'alerts' ? 'block' : 'none';
+  document.getElementById('notif-tab-history').style.display = tab === 'history' ? 'block' : 'none';
+
+  if (tab === 'alerts') {
+    renderAlerts();
+  } else {
+    renderHistory();
+  }
+}
+
+function renderAlerts() {
+  const el = document.getElementById('notif-tab-alerts');
+  const notifs = window._notifications || [];
+  if (notifs.length === 0) {
+    el.innerHTML = '<div class="notif-empty">새로운 알림이 없습니다</div>';
+    return;
+  }
+  el.innerHTML = notifs.map(n => `
+    <div class="notif-item notif-${n.type}" onclick="closeNotifications();navigateTo('${n.action}')">
+      <div class="notif-icon">${n.icon}</div>
+      <div class="notif-content">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-msg">${n.message || ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function renderHistory() {
+  const el = document.getElementById('notif-tab-history');
+  el.innerHTML = '<div class="notif-empty">불러오는 중...</div>';
+  try {
+    const data = await api.notifications.history({ limit: 30 });
+    const logs = data.logs || data || [];
+    if (!logs.length) {
+      el.innerHTML = '<div class="notif-empty">최근 활동이 없습니다</div>';
+      return;
+    }
+    el.innerHTML = logs.map(l => {
+      const icon = NOTIF_ICONS[l.type] || '🔔';
+      const time = getTimeAgo(l.created_at);
+      const page = l.target_page || '';
+      return `
+        <div class="notif-item" style="cursor:pointer" onclick="closeNotifications();${page ? `navigateTo('${page}')` : ''}">
+          <div class="notif-icon">${icon}</div>
+          <div class="notif-content">
+            <div class="notif-title">${l.title || ''}</div>
+            <div class="notif-msg">${l.actor_name ? l.actor_name + ' · ' : ''}${time}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="notif-empty">오류: ${e.message}</div>`;
+  }
 }
 
 function closeNotifications() {
@@ -314,6 +316,16 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('collapsed');
 });
 
+// 모바일: 오버레이 클릭 시 사이드바 닫기
+document.querySelector('.main-wrapper').addEventListener('click', (e) => {
+  if (window.innerWidth <= 768) {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar.classList.contains('collapsed')) {
+      sidebar.classList.add('collapsed');
+    }
+  }
+});
+
 // 로그아웃
 document.getElementById('logout-btn').addEventListener('click', async () => {
   await api.users.logout().catch(() => {});
@@ -347,7 +359,8 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.topbar-search') && !e.target.closest('.search-dropdown')) {
     document.getElementById('search-dropdown').style.display = 'none';
   }
-  if (e.target.isConnected && !e.target.closest('.notif-wrapper')) {
+  // notif-dropdown 자체에 stopPropagation이 있으므로 여기까지 오면 외부 클릭
+  if (!e.target.closest('.notif-wrapper')) {
     document.getElementById('notif-dropdown').style.display = 'none';
   }
 });

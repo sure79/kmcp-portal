@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
+const { requireLogin } = require('../middleware/auth');
+
+router.use(requireLogin);
 
 // 목록
 router.get('/', async (req, res) => {
