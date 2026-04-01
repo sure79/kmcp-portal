@@ -336,41 +336,50 @@ function renderWeeklyBoard() {
       onEnd: async (evt) => {
         const taskId = parseInt(evt.item.dataset.taskId);
         const targetCell = evt.to;
-        const newWeek = targetCell.dataset.week;
+        const newWeek = targetCell.dataset.week || '';
         const rawProject = targetCell.dataset.project;
         const newProject = (rawProject === 'null' || rawProject === '' || rawProject === 'undefined') ? null : parseInt(rawProject);
-        const newStatus = targetCell.dataset.status;
+        const cellType = targetCell.dataset.status; // 'done' or 'pending'
 
-        // 로컬 데이터 즉시 업데이트 (리렌더링 방지)
         const task = allTasks.find(t => t.id === taskId);
+
+        // 원래 상태 저장 (실패 시 원복용)
+        const originalWeek = task?.target_week;
+        const originalProject = task?.project_id;
+        const originalStatus = task?.status;
+
+        // 상태 결정: done 셀 → done, 일반/parking 셀 → 기존 상태 유지 (단, done이었으면 in_progress로)
+        const newStatus = cellType === 'done' ? 'done'
+          : (originalStatus === 'done' ? 'in_progress' : (originalStatus || 'pending'));
+
+        // 로컬 데이터 즉시 업데이트
         if (task) {
-          task.target_week = newWeek !== undefined ? newWeek : '';
+          task.target_week = newWeek;
           task.project_id = newProject;
-          task.status = newStatus === 'done' ? 'done' : 'in_progress';
+          task.status = newStatus;
         }
 
-        // Done 셀로 이동 시 투명도 적용
-        if (newStatus === 'done') {
-          evt.item.style.opacity = '0.55';
-        } else {
-          evt.item.style.opacity = '';
-        }
+        evt.item.style.opacity = newStatus === 'done' ? '0.55' : '';
 
         try {
           await api.tasks.move(taskId, {
-            target_week: newWeek !== undefined ? newWeek : '',
+            target_week: newWeek,
             project_id: newProject,
-            status: newStatus === 'done' ? 'done' : 'in_progress',
+            status: newStatus,
             sort_order: Array.from(targetCell.children).indexOf(evt.item),
           });
           if (window._socket) {
             window._socket.emit('task:move', { taskId, movedBy: window._currentUser?.name });
           }
-          // 성공 시 리렌더링 하지 않음 (DOM은 이미 SortableJS가 이동시킴)
         } catch(e) {
-          toast('저장 중 오류 발생', 'error');
-          // 실패 시에만 전체 리렌더링으로 원복
-          await loadKanban();
+          toast('이동 저장 실패: ' + e.message, 'error');
+          // 실패 시 로컬 데이터 원복 후 서버 재요청 없이 리렌더링
+          if (task) {
+            task.target_week = originalWeek;
+            task.project_id = originalProject;
+            task.status = originalStatus;
+          }
+          renderWeeklyBoard();
         }
       }
     });
@@ -579,17 +588,43 @@ async function saveTask(taskId) {
   };
   if (!data.title) { toast('제목을 입력하세요', 'error'); return; }
   try {
-    if (taskId) await api.tasks.update(taskId, data);
-    else await api.tasks.create(data);
+    const assignee = allUsers.find(u => u.id == data.assignee_id);
+    const project = allProjects.find(p => p.id == data.project_id);
+
+    if (taskId) {
+      await api.tasks.update(taskId, data);
+      // 서버 재요청 없이 로컬 allTasks 업데이트
+      const idx = allTasks.findIndex(t => t.id === taskId);
+      if (idx !== -1) {
+        allTasks[idx] = {
+          ...allTasks[idx], ...data,
+          assignee_name: assignee?.name || '',
+          project_name: project?.name || '',
+        };
+      }
+    } else {
+      const result = await api.tasks.create(data);
+      // 새 작업을 allTasks에 즉시 추가
+      allTasks.push({
+        id: result.id, ...data,
+        assignee_name: assignee?.name || '',
+        assignee_dept: assignee?.department || '',
+        project_name: project?.name || '',
+      });
+    }
+
     modal.hide();
     toast(taskId ? '수정되었습니다' : '작업이 추가되었습니다');
-    await loadKanban();
+    renderWeeklyBoard(); // 서버 재요청 없이 바로 렌더링
   } catch (e) { toast(e.message, 'error'); }
 }
 
 async function deleteTask(id) {
   if (!confirm('작업을 삭제하시겠습니까?')) return;
-  await api.tasks.delete(id);
-  toast('삭제되었습니다');
-  loadKanban();
+  try {
+    await api.tasks.delete(id);
+    allTasks = allTasks.filter(t => t.id !== id);
+    toast('삭제되었습니다');
+    renderWeeklyBoard();
+  } catch(e) { toast('삭제 실패: ' + e.message, 'error'); }
 }
