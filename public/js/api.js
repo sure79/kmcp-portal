@@ -5,15 +5,14 @@ const api = {
     if (data) opts.body = JSON.stringify(data);
     const res = await fetch(url, opts);
 
-    // 401 = 세션 만료 → 폴링 중지 + 로그인 화면으로
+    // 401 = 미인증/세션 만료
     if (res.status === 401) {
-      if (window._notifIntervalId) {
-        clearInterval(window._notifIntervalId);
-        window._notifIntervalId = null;
-      }
-      // 로그인 화면으로 전환 (새로고침이 가장 깔끔)
-      if (url !== '/api/users/login' && url !== '/api/users/logout') {
-        window.location.reload();
+      // /api/users/me 는 페이지 로드 시 로그인 확인용 — 401이 정상이므로 그냥 throw
+      // 다른 API에서 401이 오면 세션이 사용 중 만료된 것 → 로그인 화면으로 전환
+      if (url !== '/api/users/login' && url !== '/api/users/logout' && url !== '/api/users/me') {
+        if (window._notifIntervalId) { clearInterval(window._notifIntervalId); window._notifIntervalId = null; }
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
       }
       throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
     }
