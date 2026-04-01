@@ -1901,3 +1901,85 @@ body {
   color: var(--text);
 }
 .chat-input:focus { border-color: var(--coral); }
+
+/* ===== To-do 위젯 ===== */
+.todo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  height: 100%;
+}
+.todo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+.todo-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.todo-count { font-weight: 400; color: var(--text-tertiary); margin-left: 4px; }
+.todo-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.todo-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+}
+.todo-input:focus { border-color: var(--blue); }
+.todo-list { padding: 4px 0; max-height: 240px; overflow-y: auto; }
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  transition: background 0.1s;
+}
+.todo-item:hover { background: var(--surface-hover); }
+.todo-check {
+  width: 18px; height: 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+.todo-check.checked { background: var(--green); border-color: var(--green); color: #fff; }
+.todo-content { flex: 1; font-size: 13px; color: var(--text); }
+.todo-done .todo-content { text-decoration: line-through; color: var(--text-tertiary); }
+.todo-due { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+.todo-del {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); font-size: 16px; line-height: 1;
+  padding: 0 2px; opacity: 0;
+  transition: opacity 0.1s;
+}
+.todo-item:hover .todo-del { opacity: 1; }
+
+/* 업무보고 상태 배지 */
+.report-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* 이벤트-투두 2열 반응형 */
+#events-todo-row { margin-bottom: 20px; }
+@media (max-width: 900px) {
+  #events-todo-row { grid-template-columns: 1fr; }
+}

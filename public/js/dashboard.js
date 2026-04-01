@@ -52,8 +52,11 @@ async function renderDashboard() {
       <div class="weather-loading">🌤️ 날씨 불러오는 중...</div>
     </div>
 
-    <!-- 다가오는 연구소 일정 -->
-    <div id="upcoming-events-widget"></div>
+    <!-- 다가오는 연구소 일정 + 내 할일 (2열) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0" id="events-todo-row">
+      <div id="upcoming-events-widget"></div>
+      <div id="todo-widget"></div>
+    </div>
 
     ${upcomingAlerts.length > 0 ? `
       <div style="margin-bottom:24px">
@@ -274,6 +277,7 @@ async function renderDashboard() {
   // 날씨 위젯 비동기 로드
   loadBusanWeather();
   loadUpcomingEvents();
+  loadTodoWidget();
 }
 
 function renderMyTaskItem(t) {
@@ -611,4 +615,67 @@ async function loadUpcomingEvents() {
   } catch(e) {
     wrap.innerHTML = '';
   }
+}
+
+async function loadTodoWidget() {
+  const wrap = document.getElementById('todo-widget');
+  if (!wrap) return;
+
+  const renderTodo = async () => {
+    try {
+      const todos = await api.todos.list();
+      const pending = todos.filter(t => !t.done);
+      const done = todos.filter(t => t.done);
+
+      const rows = todos.slice(0, 10).map(t => `
+        <div class="todo-item ${t.done ? 'todo-done' : ''}">
+          <button class="todo-check ${t.done ? 'checked' : ''}" onclick="toggleTodo(${t.id})">
+            ${t.done ? '✓' : ''}
+          </button>
+          <span class="todo-content">${t.content}</span>
+          ${t.due_date ? `<span class="todo-due">${t.due_date.slice(5)}</span>` : ''}
+          <button class="todo-del" onclick="deleteTodo(${t.id})">×</button>
+        </div>`).join('');
+
+      wrap.innerHTML = `
+        <div class="todo-card">
+          <div class="todo-header">
+            <span class="todo-title">✅ 내 할일 <span class="todo-count">${pending.length}/${todos.length}</span></span>
+          </div>
+          <div class="todo-input-row">
+            <input id="todo-input" class="todo-input" placeholder="할일 추가..." onkeydown="if(event.key==='Enter')addTodo()">
+            <button class="btn btn-primary btn-sm" onclick="addTodo()">추가</button>
+          </div>
+          <div class="todo-list">${rows || '<div style="padding:12px 16px;font-size:13px;color:var(--text-tertiary)">등록된 할일이 없습니다</div>'}</div>
+        </div>`;
+    } catch(e) { wrap.innerHTML = ''; }
+  };
+
+  window._renderTodo = renderTodo;
+  await renderTodo();
+}
+
+async function addTodo() {
+  const input = document.getElementById('todo-input');
+  const content = input?.value.trim();
+  if (!content) return;
+  try {
+    await api.todos.create({ content });
+    input.value = '';
+    if (window._renderTodo) window._renderTodo();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function toggleTodo(id) {
+  try {
+    await api.todos.toggle(id);
+    if (window._renderTodo) window._renderTodo();
+  } catch(e) {}
+}
+
+async function deleteTodo(id) {
+  try {
+    await api.todos.delete(id);
+    if (window._renderTodo) window._renderTodo();
+  } catch(e) {}
 }

@@ -12,16 +12,16 @@ router.get('/', auth, async (req, res) => {
   try {
     const { start, end } = req.query;
     let sql = 'SELECT * FROM events';
-    const params = [];
+    const args = [];
     if (start && end) {
       sql += ' WHERE start_date <= ? AND end_date >= ?';
-      params.push(end, start);
+      args.push(end, start);
     } else if (start) {
       sql += ' WHERE end_date >= ?';
-      params.push(start);
+      args.push(start);
     }
     sql += ' ORDER BY start_date, start_time';
-    const rows = await db.all(sql, params);
+    const rows = await db.all(sql, ...args);
     res.json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -43,12 +43,12 @@ router.post('/', auth, async (req, res) => {
     const result = await db.run(
       `INSERT INTO events (title, description, start_date, end_date, start_time, end_time, all_day, color, category, created_by, created_name)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, description || '', start_date, end_date || start_date,
-       start_time || null, end_time || null, all_day ? 1 : 0,
-       color || '#4573D2', category || 'general',
-       req.session.userId, req.session.userName]
+      title, description || '', start_date, end_date || start_date,
+      start_time || null, end_time || null, all_day ? 1 : 0,
+      color || '#4573D2', category || 'general',
+      req.session.userId, req.session.userName
     );
-    const created = await db.get('SELECT * FROM events WHERE id = ?', result.lastID);
+    const created = await db.get('SELECT * FROM events WHERE id = ?', result.lastInsertRowid);
     res.status(201).json(created);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -66,11 +66,10 @@ router.put('/:id', auth, async (req, res) => {
 
     const { title, description, start_date, end_date, start_time, end_time, all_day, color, category } = req.body;
     await db.run(
-      `UPDATE events SET title=?, description=?, start_date=?, end_date=?, start_time=?, end_time=?, all_day=?, color=?, category=?
-       WHERE id=?`,
-      [title, description || '', start_date, end_date || start_date,
-       start_time || null, end_time || null, all_day ? 1 : 0,
-       color || '#4573D2', category || 'general', req.params.id]
+      `UPDATE events SET title=?, description=?, start_date=?, end_date=?, start_time=?, end_time=?, all_day=?, color=?, category=? WHERE id=?`,
+      title, description || '', start_date, end_date || start_date,
+      start_time || null, end_time || null, all_day ? 1 : 0,
+      color || '#4573D2', category || 'general', req.params.id
     );
     const updated = await db.get('SELECT * FROM events WHERE id = ?', req.params.id);
     res.json(updated);

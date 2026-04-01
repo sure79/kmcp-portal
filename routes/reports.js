@@ -96,21 +96,22 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { user_id, report_date, work_done, work_planned, special_notes, safety_notes } = req.body;
+    const { user_id, report_date, work_done, work_planned, special_notes, safety_notes, work_status } = req.body;
     if (!user_id || !report_date) return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
+    const status = work_status || 'in_progress';
 
     const userName = req.session?.user?.name || (await db.get('SELECT name FROM users WHERE id=?', user_id))?.name || '';
     const existing = await db.get('SELECT id FROM daily_reports WHERE user_id=? AND report_date=?', user_id, report_date);
     if (existing) {
       await db.run(
-        'UPDATE daily_reports SET work_done=?, work_planned=?, special_notes=?, safety_notes=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND report_date=?',
-        work_done||'', work_planned||'', special_notes||'', safety_notes||'', user_id, report_date);
+        'UPDATE daily_reports SET work_done=?, work_planned=?, special_notes=?, safety_notes=?, work_status=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND report_date=?',
+        work_done||'', work_planned||'', special_notes||'', safety_notes||'', status, user_id, report_date);
       await req.logAndNotify({ type: 'report', action: 'update', title: `${userName}님이 업무보고 수정`, message: `${report_date}`, actor_id: user_id, actor_name: userName, target_page: 'reports', target_id: existing.id });
       res.json({ id: existing.id, updated: true });
     } else {
       const result = await db.run(
-        'INSERT INTO daily_reports (user_id, report_date, work_done, work_planned, special_notes, safety_notes) VALUES (?, ?, ?, ?, ?, ?)',
-        user_id, report_date, work_done||'', work_planned||'', special_notes||'', safety_notes||'');
+        'INSERT INTO daily_reports (user_id, report_date, work_done, work_planned, special_notes, safety_notes, work_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        user_id, report_date, work_done||'', work_planned||'', special_notes||'', safety_notes||'', status);
       await req.logAndNotify({ type: 'report', action: 'create', title: `${userName}님이 업무보고 제출`, message: `${report_date}`, actor_id: user_id, actor_name: userName, target_page: 'reports', target_id: result.lastInsertRowid });
       res.json({ id: result.lastInsertRowid, updated: false });
     }

@@ -132,5 +132,11 @@ const api = {
     update: (id, d) => api.put(`/api/events/${id}`, d),
     delete: (id) => api.delete(`/api/events/${id}`),
   },
+  todos: {
+    list: () => api.get('/api/todos'),
+    create: (d) => api.post('/api/todos', d),
+    toggle: (id) => api.patch(`/api/todos/${id}/toggle`),
+    delete: (id) => api.delete(`/api/todos/${id}`),
+  },
   search: (q) => api.get(`/api/search?q=${encodeURIComponent(q)}`),
 };

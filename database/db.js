@@ -259,6 +259,21 @@ async function initDB() {
     `);
   } catch(e) { console.error('comments/chat 테이블:', e.message); }
 
+  // 개인 To-do 테이블
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS todos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        done INTEGER DEFAULT 0,
+        due_date TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  } catch(e) { console.error('todos 테이블:', e.message); }
+
   // 연구소 일정 테이블
   try {
     await db.exec(`
@@ -290,6 +305,8 @@ async function initDB() {
 
   // 마이그레이션: is_approved 컬럼 추가
   try { await db.exec('ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 0'); } catch(e) { /* 이미 존재 */ }
+  // 마이그레이션: 업무보고 진행상태 컬럼 추가
+  try { await db.exec("ALTER TABLE daily_reports ADD COLUMN work_status TEXT DEFAULT 'in_progress'"); } catch(e) { /* 이미 존재 */ }
   // 기존 사용자 전부 승인 처리
   await db.run('UPDATE users SET is_approved = 1 WHERE is_approved = 0 OR is_approved IS NULL');
 

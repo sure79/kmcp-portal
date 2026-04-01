@@ -73,18 +73,27 @@ async function loadReports() {
     return;
   }
 
-  list.innerHTML = reports.map(r => `
+  const statusInfo = {
+    in_progress: { label: '진행중', color: 'var(--blue)' },
+    review:      { label: '검토중', color: 'var(--yellow)' },
+    done:        { label: '완료',   color: 'var(--green)' },
+    blocked:     { label: '지연/보류', color: 'var(--red)' },
+  };
+
+  list.innerHTML = reports.map(r => {
+    const st = statusInfo[r.work_status] || statusInfo.in_progress;
+    return `
     <div class="report-list-item" onclick="viewReport(${r.id})">
       <div class="avatar avatar-sm ${getAvatarColor(r.name)}">${(r.name||'?').slice(0,1)}</div>
       <div class="report-date">${r.report_date}</div>
       <div class="report-author" style="font-weight:500">${r.name}</div>
+      <span class="report-status-badge" style="background:${st.color}22;color:${st.color};border:1px solid ${st.color}44">${st.label}</span>
       <div class="report-preview">${r.work_done || '(내용 없음)'}</div>
       <div style="display:flex;gap:4px;margin-left:auto;flex-shrink:0" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-sm" onclick="editReport(${r.id})">수정</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteReport(${r.id})">삭제</button>
       </div>
-    </div>
-  `).join('');
+    </div>`; }).join('');
 }
 
 async function openReportForm(reportId) {
@@ -121,6 +130,15 @@ async function openReportForm(reportId) {
     <div class="form-group">
       <label>특이사항</label>
       <textarea id="r-special" rows="2" placeholder="특이사항이 있으면 입력하세요">${report ? report.special_notes : ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label>진행 상태</label>
+      <select id="r-status">
+        <option value="in_progress" ${(!report || report.work_status === 'in_progress') ? 'selected' : ''}>🔵 진행중</option>
+        <option value="review"      ${report?.work_status === 'review'      ? 'selected' : ''}>🟡 검토중</option>
+        <option value="done"        ${report?.work_status === 'done'        ? 'selected' : ''}>🟢 완료</option>
+        <option value="blocked"     ${report?.work_status === 'blocked'     ? 'selected' : ''}>🔴 지연/보류</option>
+      </select>
     </div>`,
     `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
      <button class="btn btn-coral" onclick="saveReport()">저장</button>`
@@ -134,6 +152,7 @@ async function saveReport() {
     work_done: document.getElementById('r-done').value,
     work_planned: document.getElementById('r-planned').value,
     special_notes: document.getElementById('r-special').value,
+    work_status: document.getElementById('r-status')?.value || 'in_progress',
   };
   if (!data.user_id || !data.report_date) { toast('직원과 날짜를 선택하세요', 'error'); return; }
   try {

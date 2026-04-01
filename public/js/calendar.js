@@ -389,45 +389,43 @@ async function openEventForm(defaultDate, editId) {
   ).join('');
 
   const content = `
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <label class="form-label">제목 *</label>
-        <input id="ev-title" class="form-input" placeholder="일정 제목" value="${ev ? ev.title : ''}">
+    <div class="form-group">
+      <label>제목 *</label>
+      <input id="ev-title" type="text" placeholder="일정 제목" value="${ev ? ev.title : ''}">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>시작일 *</label>
+        <input id="ev-start" type="date" value="${ev ? ev.start_date : today}">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label class="form-label">시작일 *</label>
-          <input id="ev-start" type="date" class="form-input" value="${ev ? ev.start_date : today}">
-        </div>
-        <div>
-          <label class="form-label">종료일</label>
-          <input id="ev-end" type="date" class="form-input" value="${ev ? ev.end_date : today}">
-        </div>
+      <div class="form-group">
+        <label>종료일</label>
+        <input id="ev-end" type="date" value="${ev ? ev.end_date : today}">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label class="form-label">시작 시간 <span style="color:var(--text-tertiary)">(선택)</span></label>
-          <input id="ev-start-time" type="time" class="form-input" value="${ev && ev.start_time ? ev.start_time : ''}">
-        </div>
-        <div>
-          <label class="form-label">종료 시간 <span style="color:var(--text-tertiary)">(선택)</span></label>
-          <input id="ev-end-time" type="time" class="form-input" value="${ev && ev.end_time ? ev.end_time : ''}">
-        </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>시작 시간 <span style="font-weight:400;color:var(--text-tertiary)">(선택)</span></label>
+        <input id="ev-start-time" type="time" value="${ev && ev.start_time ? ev.start_time : ''}">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label class="form-label">색상</label>
-          <select id="ev-color" class="form-input">${colorOpts}</select>
-        </div>
-        <div>
-          <label class="form-label">분류</label>
-          <select id="ev-category" class="form-input">${catOpts}</select>
-        </div>
+      <div class="form-group">
+        <label>종료 시간 <span style="font-weight:400;color:var(--text-tertiary)">(선택)</span></label>
+        <input id="ev-end-time" type="time" value="${ev && ev.end_time ? ev.end_time : ''}">
       </div>
-      <div>
-        <label class="form-label">메모</label>
-        <textarea id="ev-desc" class="form-input" rows="2" placeholder="상세 내용 (선택)">${ev ? ev.description : ''}</textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>색상</label>
+        <select id="ev-color">${colorOpts}</select>
       </div>
+      <div class="form-group">
+        <label>분류</label>
+        <select id="ev-category">${catOpts}</select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>메모 <span style="font-weight:400;color:var(--text-tertiary)">(선택)</span></label>
+      <textarea id="ev-desc" rows="2" placeholder="상세 내용">${ev ? ev.description : ''}</textarea>
     </div>`;
 
   modal.show(editId ? '일정 편집' : '일정 추가', content,
