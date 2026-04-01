@@ -1363,6 +1363,26 @@ body {
   color: var(--text-tertiary);
   padding: 8px 0;
 }
+.weather-no-key {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 13px;
+}
+.weather-no-key strong { display: block; margin-bottom: 4px; font-size: 14px; }
+.weather-no-key p { color: var(--text-secondary); margin: 0; line-height: 1.6; }
+.weather-no-key code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-family: monospace;
+}
 .weather-card {
   background: linear-gradient(145deg, #0d47a1 0%, #1565c0 35%, #1976d2 65%, #1e88e5 100%);
   border-radius: 18px;
