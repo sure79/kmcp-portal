@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, requireAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const { title, content, author_id, is_pinned } = req.body;
     if (!title) return res.status(400).json({ error: '제목은 필수입니다.' });
@@ -25,7 +25,7 @@ router.post('/', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { title, content, is_pinned } = req.body;
     await db.run('UPDATE notices SET title=?, content=?, is_pinned=? WHERE id=?',
@@ -34,7 +34,7 @@ router.put('/:id', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     await db.run('DELETE FROM notices WHERE id = ?', req.params.id);
     res.json({ success: true });

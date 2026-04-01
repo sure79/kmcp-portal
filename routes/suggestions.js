@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, requireAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -49,7 +49,7 @@ router.post('/:id/like', async (req, res) => {
 });
 
 // 관리자 답변
-router.post('/:id/reply', async (req, res) => {
+router.post('/:id/reply', requireAdmin, async (req, res) => {
   try {
     const { admin_reply, status } = req.body;
     await db.run('UPDATE suggestions SET admin_reply=?, status=?, replied_at=CURRENT_TIMESTAMP WHERE id=?',
@@ -58,9 +58,15 @@ router.post('/:id/reply', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// 삭제
+// 삭제 (관리자 또는 본인만)
 router.delete('/:id', async (req, res) => {
   try {
+    const userId = req.session.userId;
+    const isAdmin = req.session.isAdmin;
+    if (!isAdmin) {
+      const row = await db.get('SELECT author_id FROM suggestions WHERE id=?', req.params.id);
+      if (!row || row.author_id != userId) return res.status(403).json({ error: '본인 건의만 삭제할 수 있습니다.' });
+    }
     await db.run('DELETE FROM suggestions WHERE id=?', req.params.id);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }

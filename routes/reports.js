@@ -119,6 +119,12 @@ router.post('/', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
+    const userId = req.session.userId;
+    const isAdmin = req.session.isAdmin;
+    if (!isAdmin) {
+      const row = await db.get('SELECT user_id FROM daily_reports WHERE id=?', req.params.id);
+      if (!row || row.user_id != userId) return res.status(403).json({ error: '본인 보고서만 삭제할 수 있습니다.' });
+    }
     await db.run('DELETE FROM daily_reports WHERE id = ?', req.params.id);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
