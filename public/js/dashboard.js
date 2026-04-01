@@ -52,11 +52,8 @@ async function renderDashboard() {
       <div class="weather-loading">🌤️ 날씨 불러오는 중...</div>
     </div>
 
-    <!-- 다가오는 연구소 일정 + 내 할일 (2열) -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0" id="events-todo-row">
-      <div id="upcoming-events-widget"></div>
-      <div id="todo-widget"></div>
-    </div>
+    <!-- 다가오는 연구소 일정 -->
+    <div id="upcoming-events-widget"></div>
 
     ${upcomingAlerts.length > 0 ? `
       <div style="margin-bottom:24px">
@@ -116,25 +113,8 @@ async function renderDashboard() {
     </div>
 
     <div class="grid grid-2">
-      <!-- 내 작업 To-Do 리스트 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">내 할 일</div>
-          <button class="btn btn-ghost btn-sm" onclick="navigateTo('kanban')">전체 보기 →</button>
-        </div>
-        ${(myInProgress.length + myPending.length) === 0 ? `
-          <div class="empty-state" style="padding:24px">
-            <div class="empty-icon">🎉</div>
-            <p>모든 작업이 완료되었습니다!</p>
-          </div>
-        ` : `
-          <div class="my-task-list">
-            ${myInProgress.map(t => renderMyTaskItem(t)).join('')}
-            ${myPending.map(t => renderMyTaskItem(t)).join('')}
-            ${myReview.map(t => renderMyTaskItem(t)).join('')}
-          </div>
-        `}
-      </div>
+      <!-- 내 할일 To-do -->
+      <div id="todo-widget" class="card" style="min-height:200px"></div>
 
       <div>
         <!-- 이번주 내 보고서 (To-Do 체크리스트) -->
@@ -617,42 +597,73 @@ async function loadUpcomingEvents() {
   }
 }
 
+let _todoShowAll = false;
+
 async function loadTodoWidget() {
   const wrap = document.getElementById('todo-widget');
   if (!wrap) return;
+  window._renderTodo = () => _renderTodoWidget(wrap);
+  await _renderTodoWidget(wrap);
+}
 
-  const renderTodo = async () => {
-    try {
-      const todos = await api.todos.list();
-      const pending = todos.filter(t => !t.done);
-      const done = todos.filter(t => t.done);
+async function _renderTodoWidget(wrap) {
+  try {
+    const todos = await api.todos.list();
+    const pending = todos.filter(t => !t.done);
+    const done    = todos.filter(t => t.done);
+    const total   = todos.length;
+    const doneCount = done.length;
+    const pct = total ? Math.round(doneCount / total * 100) : 0;
 
-      const rows = todos.slice(0, 10).map(t => `
-        <div class="todo-item ${t.done ? 'todo-done' : ''}">
-          <button class="todo-check ${t.done ? 'checked' : ''}" onclick="toggleTodo(${t.id})">
-            ${t.done ? '✓' : ''}
+    // 표시할 항목: 전체보기 아니면 미완료 최대5 + 완료 1
+    const showList = _todoShowAll
+      ? todos
+      : [...pending.slice(0, 5), ...done.slice(0, 1)];
+
+    const rows = showList.map(t => `
+      <div class="td-item ${t.done ? 'td-done' : ''}">
+        <button class="td-check ${t.done ? 'td-checked' : ''}" onclick="toggleTodo(${t.id})" title="${t.done ? '되돌리기' : '완료'}">
+          ${t.done ? `<svg width="10" height="8" viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
+        </button>
+        <span class="td-text">${t.content}</span>
+        ${t.due_date ? `<span class="td-due ${new Date(t.due_date) < new Date() && !t.done ? 'td-due-over' : ''}">${t.due_date.slice(5).replace('-','/')}</span>` : ''}
+        <button class="td-del" onclick="deleteTodo(${t.id})" title="삭제">
+          <svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>`).join('');
+
+    const moreCount = _todoShowAll ? 0 : (pending.length - Math.min(pending.length, 5));
+
+    wrap.innerHTML = `
+      <div class="card-header">
+        <div class="card-title">내 할일</div>
+        ${total > 0 ? `<span class="td-progress-text">${doneCount}/${total} 완료</span>` : ''}
+      </div>
+      ${total > 0 ? `
+        <div class="td-progress-bar-wrap">
+          <div class="td-progress-bar" style="width:${pct}%"></div>
+        </div>` : ''}
+      <div class="td-add-row">
+        <input id="todo-input" class="td-input" placeholder="+ 할일을 입력하고 Enter" onkeydown="if(event.key==='Enter')addTodo()">
+      </div>
+      <div class="td-list">
+        ${rows || `<div class="td-empty"><span>🎉</span><p>할일이 없습니다</p></div>`}
+        ${!_todoShowAll && moreCount > 0 ? `
+          <button class="td-more-btn" onclick="_todoShowAll=true;window._renderTodo()">
+            + ${moreCount}개 더 보기
+          </button>` : ''}
+        ${_todoShowAll && total > 6 ? `
+          <button class="td-more-btn" onclick="_todoShowAll=false;window._renderTodo()">
+            접기
+          </button>` : ''}
+      </div>
+      ${done.length > 0 && !_todoShowAll ? `
+        <div class="td-footer">
+          <button class="btn btn-ghost btn-sm" onclick="_todoShowAll=true;window._renderTodo()">
+            완료된 항목 ${done.length}개 보기 →
           </button>
-          <span class="todo-content">${t.content}</span>
-          ${t.due_date ? `<span class="todo-due">${t.due_date.slice(5)}</span>` : ''}
-          <button class="todo-del" onclick="deleteTodo(${t.id})">×</button>
-        </div>`).join('');
-
-      wrap.innerHTML = `
-        <div class="todo-card">
-          <div class="todo-header">
-            <span class="todo-title">✅ 내 할일 <span class="todo-count">${pending.length}/${todos.length}</span></span>
-          </div>
-          <div class="todo-input-row">
-            <input id="todo-input" class="todo-input" placeholder="할일 추가..." onkeydown="if(event.key==='Enter')addTodo()">
-            <button class="btn btn-primary btn-sm" onclick="addTodo()">추가</button>
-          </div>
-          <div class="todo-list">${rows || '<div style="padding:12px 16px;font-size:13px;color:var(--text-tertiary)">등록된 할일이 없습니다</div>'}</div>
-        </div>`;
-    } catch(e) { wrap.innerHTML = ''; }
-  };
-
-  window._renderTodo = renderTodo;
-  await renderTodo();
+        </div>` : ''}`;
+  } catch(e) { wrap.innerHTML = ''; }
 }
 
 async function addTodo() {

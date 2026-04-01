@@ -1902,71 +1902,112 @@ body {
 }
 .chat-input:focus { border-color: var(--coral); }
 
-/* ===== To-do 위젯 ===== */
-.todo-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+/* ===== To-do 위젯 (개선) ===== */
+.td-progress-text {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.td-progress-bar-wrap {
+  height: 3px;
+  background: var(--border-light);
+  margin: 0 16px 2px;
+  border-radius: 2px;
+}
+.td-progress-bar {
   height: 100%;
+  background: var(--green);
+  border-radius: 2px;
+  transition: width 0.3s;
+  min-width: 4px;
 }
-.todo-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-light);
+.td-add-row {
+  padding: 8px 16px 6px;
 }
-.todo-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.todo-count { font-weight: 400; color: var(--text-tertiary); margin-left: 4px; }
-.todo-input-row {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border-light);
-}
-.todo-input {
-  flex: 1;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px 10px;
+.td-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  background: transparent;
+  padding: 6px 0;
   font-size: 13px;
   color: var(--text);
-  background: var(--bg);
   outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
 }
-.todo-input:focus { border-color: var(--blue); }
-.todo-list { padding: 4px 0; max-height: 240px; overflow-y: auto; }
-.todo-item {
+.td-input:focus { border-color: var(--blue); }
+.td-input::placeholder { color: var(--text-tertiary); }
+.td-list { padding: 4px 0 2px; }
+.td-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
+  gap: 9px;
+  padding: 7px 16px;
+  border-radius: 6px;
   transition: background 0.1s;
+  cursor: default;
 }
-.todo-item:hover { background: var(--surface-hover); }
-.todo-check {
+.td-item:hover { background: var(--surface-hover); }
+.td-check {
   width: 18px; height: 18px;
   border: 1.5px solid var(--border);
-  border-radius: 4px;
+  border-radius: 5px;
   background: none;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700;
   flex-shrink: 0;
-  transition: all 0.1s;
+  transition: all 0.15s;
+  color: transparent;
+  padding: 0;
 }
-.todo-check.checked { background: var(--green); border-color: var(--green); color: #fff; }
-.todo-content { flex: 1; font-size: 13px; color: var(--text); }
-.todo-done .todo-content { text-decoration: line-through; color: var(--text-tertiary); }
-.todo-due { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
-.todo-del {
+.td-check:hover { border-color: var(--green); }
+.td-checked { background: var(--green); border-color: var(--green); color: #fff; }
+.td-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+  word-break: break-all;
+}
+.td-done .td-text { text-decoration: line-through; color: var(--text-tertiary); }
+.td-due {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  background: var(--border-light);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.td-due-over { color: var(--red); background: var(--red-light); }
+.td-del {
   background: none; border: none; cursor: pointer;
-  color: var(--text-tertiary); font-size: 16px; line-height: 1;
-  padding: 0 2px; opacity: 0;
+  color: var(--text-tertiary);
+  padding: 2px; opacity: 0;
   transition: opacity 0.1s;
+  display: flex; align-items: center;
+  flex-shrink: 0;
 }
-.todo-item:hover .todo-del { opacity: 1; }
+.td-item:hover .td-del { opacity: 1; }
+.td-del:hover { color: var(--red); }
+.td-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 20px 16px;
+  color: var(--text-tertiary); font-size: 13px;
+}
+.td-empty span { font-size: 24px; }
+.td-more-btn {
+  width: 100%;
+  background: none; border: none; cursor: pointer;
+  color: var(--blue); font-size: 12px;
+  padding: 6px 16px;
+  text-align: left;
+}
+.td-more-btn:hover { text-decoration: underline; }
+.td-footer {
+  padding: 4px 8px 8px;
+  border-top: 1px solid var(--border-light);
+}
 
 /* 업무보고 상태 배지 */
 .report-status-badge {
@@ -1976,10 +2017,4 @@ body {
   border-radius: 20px;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-/* 이벤트-투두 2열 반응형 */
-#events-todo-row { margin-bottom: 20px; }
-@media (max-width: 900px) {
-  #events-todo-row { grid-template-columns: 1fr; }
 }
