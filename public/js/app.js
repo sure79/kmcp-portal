@@ -152,6 +152,11 @@ function initApp(user) {
     toast(`${data.name||'누군가'}님이 점심 투표를 시작했습니다!`, 'info');
   });
 
+  // 실시간 채팅 메시지 수신
+  window._socket.on('chat:message', (msg) => {
+    if (typeof onChatSocketMessage === 'function') onChatSocketMessage(msg);
+  });
+
   // 실시간 활동 알림 수신
   window._socket.on('notification', (data) => {
     // 토스트 알림 표시

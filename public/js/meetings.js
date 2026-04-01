@@ -289,6 +289,7 @@ async function viewMeeting(id) {
         </div>
       ` : ''}
 
+      <div id="meeting-comments-${id}" class="meeting-section"></div>
     </div>`,
     `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
      <button class="btn btn-coral" onclick="modal.hide();openMeetingForm(${id})">수정</button>`
@@ -301,6 +302,9 @@ async function viewMeeting(id) {
     origHide.call(modal);
     modal.hide = origHide;
   };
+
+  // 댓글 렌더링
+  renderComments(`meeting-comments-${id}`, 'meeting', id);
 }
 
 async function confirmAttendance(meetingId) {

@@ -236,7 +236,35 @@
 <!-- 토스트 알림 -->
 <div id="toast-container"></div>
 
+<!-- 채팅 FAB 버튼 -->
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="팀 채팅">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+  <span class="chat-badge" id="chat-badge" style="display:none">0</span>
+</button>
+
+<!-- 채팅 패널 -->
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-panel-header">
+    <div class="chat-panel-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      팀 채팅
+    </div>
+    <button class="chat-close-btn" onclick="toggleChat()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chat-message-input" class="chat-input" placeholder="메시지를 입력하세요... (Enter 전송)" onkeydown="onChatKeydown(event)">
+    <button class="btn btn-coral btn-sm" onclick="sendChatMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
 <script src="/js/api.js"></script>
+<script src="/js/comments.js"></script>
+<script src="/js/chat.js"></script>
 <script src="/js/modal.js"></script>
 <script src="/js/toast.js"></script>
 <script src="/js/dashboard.js"></script>

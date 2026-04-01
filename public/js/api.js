@@ -116,5 +116,14 @@ const api = {
     close: (id) => api.post(`/api/polls/${id}/close`),
     delete: (id) => api.delete(`/api/polls/${id}`),
   },
+  comments: {
+    list: (type, id) => api.get(`/api/comments?type=${type}&id=${id}`),
+    create: (d) => api.post('/api/comments', d),
+    delete: (id) => api.delete(`/api/comments/${id}`),
+  },
+  chat: {
+    history: () => api.get('/api/chat'),
+    send: (content) => api.post('/api/chat', { content }),
+  },
   search: (q) => api.get(`/api/search?q=${encodeURIComponent(q)}`),
 };

@@ -90,6 +90,8 @@ app.use('/api/suggestions', require('./routes/suggestions'));
 app.use('/api/polls', require('./routes/polls'));
 app.use('/api/demo', require('./routes/demo'));
 app.use('/api/transcribe', require('./routes/transcribe'));
+app.use('/api/comments', require('./routes/comments'));
+app.use('/api/chat', require('./routes/chat'));
 
 // ===== 글로벌 검색 =====
 app.get('/api/search', (req, res, next) => {

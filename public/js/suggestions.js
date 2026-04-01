@@ -183,11 +183,15 @@ async function viewSuggestion(id) {
        ${s.is_anonymous ? '🎭 익명' : `👤 ${s.author_name}`} · ${getTimeAgo(s.created_at)} · 👍 ${s.like_count || 0}
      </div>
      ${replySection}
-     ${adminActions}`,
+     ${adminActions}
+     <div id="suggestion-comments-${s.id}" style="margin-top:16px"></div>`,
     `${isAdmin || s.author_id === window._currentUser?.id ? `<button class="btn btn-danger btn-sm" onclick="deleteSuggestion(${s.id})">삭제</button>` : ''}
      <div style="flex:1"></div>
      <button class="btn btn-secondary" onclick="modal.hide()">닫기</button>`
   );
+
+  // 댓글 렌더링
+  renderComments(`suggestion-comments-${s.id}`, 'suggestion', s.id);
 }
 
 async function replySuggestion(id) {

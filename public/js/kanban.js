@@ -477,6 +477,7 @@ function openTaskDetail(taskId) {
           </div>
         </div>
       </div>
+      <div id="task-comments-${t.id}"></div>
     </div>`,
     `<button class="btn btn-danger" onclick="modal.hide();deleteTask(${t.id})">삭제</button>
      <div style="flex:1"></div>
@@ -491,6 +492,9 @@ function openTaskDetail(taskId) {
     origHide.call(modal);
     modal.hide = origHide;
   };
+
+  // 댓글 렌더링
+  renderComments(`task-comments-${t.id}`, 'task', t.id);
 }
 
 function getProjectColor(id) {

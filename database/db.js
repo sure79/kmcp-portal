@@ -235,6 +235,30 @@ async function initDB() {
     );
   `);
 
+  // 댓글 테이블 (회의/작업/건의에 공통 사용)
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_type TEXT NOT NULL,
+        target_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        user_name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        user_name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  } catch(e) { console.error('comments/chat 테이블:', e.message); }
+
   // 알림 히스토리 테이블
   try {
     await db.run(`CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, action TEXT NOT NULL, title TEXT NOT NULL, message TEXT DEFAULT '', actor_id INTEGER, actor_name TEXT DEFAULT '', target_page TEXT DEFAULT '', target_id INTEGER, is_read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
