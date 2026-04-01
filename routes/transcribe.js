@@ -78,8 +78,18 @@ async function uploadToGoogleFiles(apiKey, filePath, mimeType, displayName) {
   return json.file.uri;
 }
 
-// Gemini generateContent — SDK 없이 REST v1 직접 호출
-async function generateMeetingMinutes(apiKey, fileUri, mimeType, modelName) {
+// fileData는 v1beta에서만 지원 — v1beta 엔드포인트 사용, 모델 자동 폴백
+const MODEL_FALLBACKS = [
+  'gemini-2.0-flash-exp',     // 2.0 실험버전 (v1beta에서 지원)
+  'gemini-2.0-flash',         // 2.0 정식 (일부 키에서 v1beta 지원)
+  'gemini-1.5-flash-002',     // 1.5 최신 안정버전
+  'gemini-1.5-flash-001',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro-002',
+  'gemini-1.5-pro',
+];
+
+async function generateMeetingMinutes(apiKey, fileUri, mimeType, preferredModel) {
   const prompt = `이 오디오 파일은 회사 내부 회의 녹음입니다.
 한국어로 회의록을 작성하고 반드시 아래 JSON 형식으로만 응답하세요 (JSON 외 다른 텍스트 없이):
 
@@ -96,33 +106,53 @@ async function generateMeetingMinutes(apiKey, fileUri, mimeType, modelName) {
 - 전문 용어는 그대로 사용
 - 내용이 없는 항목은 빈 문자열로`;
 
-  // v1 엔드포인트 직접 호출 (SDK 우회)
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { fileData: { mimeType, fileUri } },
-            { text: prompt },
-          ],
-        }],
-        generationConfig: { temperature: 0.1 },
-      }),
-    }
-  );
+  // 우선 시도할 모델 목록 (환경변수 > 폴백 순)
+  const modelsToTry = preferredModel
+    ? [preferredModel, ...MODEL_FALLBACKS.filter(m => m !== preferredModel)]
+    : MODEL_FALLBACKS;
 
-  if (!res.ok) {
+  let lastError = null;
+  for (const modelName of modelsToTry) {
+    console.log(`Gemini 모델 시도: ${modelName}`);
+    // fileData 는 반드시 v1beta 엔드포인트
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { fileData: { mimeType, fileUri } },
+              { text: prompt },
+            ],
+          }],
+          generationConfig: { temperature: 0.1 },
+        }),
+      }
+    );
+
+    if (res.ok) {
+      const json = await res.json();
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        console.log(`성공 모델: ${modelName}`);
+        return text.trim();
+      }
+      lastError = new Error('Gemini가 빈 응답을 반환했습니다.');
+      continue;
+    }
+
     const errText = await res.text();
-    throw new Error(`Gemini 응답 오류 (${res.status}): ${errText}`);
+    console.log(`모델 ${modelName} 실패 (${res.status}): ${errText.slice(0, 200)}`);
+    // 404(모델 없음) → 다음 모델 시도 / 다른 오류 → 즉시 중단
+    if (res.status !== 404) {
+      throw new Error(`Gemini 응답 오류 (${res.status}): ${errText}`);
+    }
+    lastError = new Error(`모델 없음: ${modelName}`);
   }
 
-  const json = await res.json();
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini가 빈 응답을 반환했습니다.');
-  return text.trim();
+  throw lastError || new Error('사용 가능한 Gemini 모델을 찾을 수 없습니다.');
 }
 
 // 녹음 파일 업로드 → Gemini 분석 → 회의록 반환
