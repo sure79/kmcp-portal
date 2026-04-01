@@ -56,7 +56,8 @@ router.post('/', upload.single('audio'), async (req, res) => {
     console.log('업로드 완료:', fileUri);
 
     // 2단계: Gemini로 회의록 생성
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const prompt = `이 오디오 파일은 회사 내부 회의 녹음입니다.
 한국어로 회의록을 작성하고 반드시 아래 JSON 형식으로만 응답하세요 (JSON 외 다른 텍스트 없이):
