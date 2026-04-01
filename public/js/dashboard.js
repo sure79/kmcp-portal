@@ -485,30 +485,23 @@ async function loadBusanWeather() {
     const now     = new Date(updated || Date.now());
     const todayF  = forecast[0];
     const todayWmo = WMO_CODE[todayF.weatherCode] || WMO_CODE[1];
+    const updateStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 기상청`;
 
-    // 오늘 통계 카드
+    // 오늘 통계
     const stats = [
-      { icon: '💧', value: `${todayF.precipProb}%`,
-        label: '강수 확률',
-        valueStyle: `color:${todayF.precipProb >= 70 ? '#64b5f6' : todayF.precipProb >= 40 ? '#90caf9' : 'rgba(255,255,255,0.9)'}` },
-      { icon: '🌧️', value: todayF.precipSum != null ? `${todayF.precipSum}mm` : '-',
-        label: '강수량' },
-      { icon: '💨', value: todayF.windSpeed != null ? `${todayF.windSpeed}km/h` : '-',
-        label: '최대 풍속' },
-      { icon: '💦', value: todayF.humidity != null ? `${todayF.humidity}%` : '-',
-        label: '평균 습도' },
+      { value: todayF.precipProb != null ? `${todayF.precipProb}%` : '-', label: '강수확률' },
+      { value: todayF.precipSum  != null && todayF.precipSum > 0 ? `${todayF.precipSum}mm` : '-', label: '강수량' },
+      { value: todayF.windSpeed  != null ? `${todayF.windSpeed}㎞/h` : '-', label: '풍속' },
+      { value: todayF.humidity   != null ? `${todayF.humidity}%` : '-', label: '습도' },
     ].map(s => `
       <div class="weather-stat">
-        <span class="weather-stat-icon">${s.icon}</span>
-        <div>
-          <div class="weather-stat-value" ${s.valueStyle ? `style="${s.valueStyle}"` : ''}>${s.value}</div>
-          <div class="weather-stat-label">${s.label}</div>
-        </div>
+        <div class="weather-stat-value">${s.value}</div>
+        <div class="weather-stat-label">${s.label}</div>
       </div>`).join('');
 
-    // 7일 예보 카드
+    // 7일 예보
     const cards = forecast.map((f, i) => {
-      const wmo   = WMO_CODE[f.weatherCode] || WMO_CODE[1];
+      const wmo = WMO_CODE[f.weatherCode] || WMO_CODE[1];
       const dateObj = new Date(
         parseInt(f.date.slice(0,4)),
         parseInt(f.date.slice(4,6)) - 1,
@@ -517,52 +510,40 @@ async function loadBusanWeather() {
       const mo  = dateObj.getMonth() + 1;
       const dy  = dateObj.getDate();
       const dow = WEEK_DAYS_KO[dateObj.getDay()];
-      const dayLabel = i === 0 ? '오늘' : (i === 1 ? '내일' : dow+'요일');
-      const hasRain = f.precipProb >= 20 || (f.precipSum && parseFloat(f.precipSum) > 0.1);
-      const isMid = f.source === 'mid';
-
+      const dayLabel = i === 0 ? '오늘' : (i === 1 ? '내일' : dow);
+      const rainClass = f.precipProb >= 30 ? '' : 'no-rain';
       return `
-        <div class="weather-day ${i === 0 ? 'weather-day-today' : ''} ${hasRain ? 'weather-day-rainy' : ''}">
+        <div class="weather-day ${i === 0 ? 'weather-day-today' : ''}">
           <div class="weather-day-label">${dayLabel}</div>
           <div class="weather-day-date">${mo}/${dy}</div>
           <div class="weather-day-icon">${wmo.icon}</div>
-          <div class="weather-day-desc">${f.wfText || wmo.label}</div>
           <div class="weather-day-temp">
             <span class="weather-temp-high">${f.tempMax != null ? Math.round(f.tempMax)+'°' : '-'}</span>
             <span class="weather-temp-sep">/</span>
             <span class="weather-temp-low">${f.tempMin != null ? Math.round(f.tempMin)+'°' : '-'}</span>
           </div>
-          <div class="weather-rain-prob" style="color:${rainColor(f.precipProb)}">
-            💧 ${f.precipProb}%
-          </div>
-          ${!isMid && f.precipSum > 0 ? `<div class="weather-day-rainamt">${f.precipSum}mm</div>`
-            : '<div class="weather-day-rainamt" style="opacity:0">-</div>'}
+          <div class="weather-rain-prob ${rainClass}">${f.precipProb}%</div>
         </div>`;
     }).join('');
-
-    const updateStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 기상청`;
 
     wrap.innerHTML = `
       <div class="weather-card">
         <div class="weather-top-bar">
-          <span class="weather-location-tag">📍 부산 날씨</span>
+          <span class="weather-location-tag">부산 날씨</span>
           <span class="weather-update-time">${updateStr}</span>
-          <span class="weather-source-tag">기상청 공식</span>
+          <span class="weather-source-tag">기상청</span>
         </div>
         <div class="weather-today-row">
-          <div class="weather-today-left">
-            <div class="weather-today-icon-big">${todayWmo.icon}</div>
-            <div>
-              <div class="weather-today-temp-big">
-                ${todayF.tempMax != null ? Math.round(todayF.tempMax)+'°' : '-'}
-                <span class="weather-today-low-big">/ ${todayF.tempMin != null ? Math.round(todayF.tempMin)+'°' : '-'}</span>
-              </div>
-              <div class="weather-today-label">${todayWmo.label}</div>
+          <div class="weather-today-icon">${todayWmo.icon}</div>
+          <div class="weather-today-main">
+            <div class="weather-today-temp">
+              ${todayF.tempMax != null ? Math.round(todayF.tempMax)+'°' : '-'}
+              <span>/ ${todayF.tempMin != null ? Math.round(todayF.tempMin)+'°' : '-'}</span>
             </div>
+            <div class="weather-today-desc">${todayWmo.label}</div>
           </div>
           <div class="weather-today-stats">${stats}</div>
         </div>
-        <div class="weather-week-label">7일 예보</div>
         <div class="weather-week">${cards}</div>
       </div>`;
 
