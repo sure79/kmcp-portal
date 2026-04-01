@@ -132,7 +132,7 @@ function initApp(user) {
   // Socket.io 연결
   window._socket = io();
   window._socket.on('task:moved', (data) => {
-    if (currentPage === 'kanban') loadKanban();
+    if (currentPage === 'kanban') safeLoadKanban();
     toast(`${data.movedBy||'누군가'}님이 작업을 이동했습니다`, 'info');
   });
   window._socket.on('report:new', (data) => {
@@ -164,8 +164,13 @@ function initApp(user) {
 
     // 현재 보고 있는 페이지면 자동 새로고침
     if (data.target_page && currentPage === data.target_page) {
-      const renderer = pageRenderers[currentPage];
-      if (renderer) renderer();
+      if (currentPage === 'kanban') {
+        // 칸반은 전체 재렌더링(HTML 초기화) 대신 데이터만 새로고침
+        if (typeof safeLoadKanban === 'function') safeLoadKanban();
+      } else {
+        const renderer = pageRenderers[currentPage];
+        if (renderer) renderer();
+      }
     }
   });
 

@@ -628,3 +628,16 @@ async function deleteTask(id) {
     renderWeeklyBoard();
   } catch(e) { toast('삭제 실패: ' + e.message, 'error'); }
 }
+
+// 소켓 알림 등 외부 이벤트에서 보드가 이미 렌더링된 상태로 데이터만 새로고침
+// renderKanban()처럼 HTML을 초기화하지 않고 allTasks만 업데이트 후 재렌더
+async function safeLoadKanban() {
+  if (!document.getElementById('weekly-board')) return; // 보드가 마운트되지 않은 상태면 무시
+  try {
+    const tasks = await api.tasks.list();
+    allTasks = tasks;
+    renderWeeklyBoard();
+  } catch(e) {
+    // 실패 시 기존 보드 그대로 유지
+  }
+}

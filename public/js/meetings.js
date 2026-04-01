@@ -55,24 +55,28 @@ async function loadMeetings() {
         <div class="meeting-month-header">${y}년 ${parseInt(mo)}월</div>
         <div class="card" style="padding:0">
           ${items.map(m => {
-            const hasMinutes = m.minutes || m.decisions;
+            // 안건·회의록·결정사항 중 하나라도 있으면 기록 있음
+            const hasContent = !!(m.agenda || m.minutes || m.decisions);
+            const previewText = (m.minutes || m.agenda || m.decisions || '').replace(/\n/g, ' ').trim();
+            const preview = previewText.length > 90 ? previewText.slice(0, 90) + '…' : previewText;
             return `
               <div class="meeting-list-item" onclick="viewMeeting(${m.id})">
                 <div class="meeting-date-badge">
                   <div class="month">${m.meeting_date.slice(5,7)}월</div>
                   <div class="day">${m.meeting_date.slice(8,10)}</div>
                 </div>
-                <div class="meeting-info">
+                <div class="meeting-info" style="flex:1;min-width:0">
                   <div class="meeting-title">${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}</div>
                   <div class="meeting-time">
                     ${m.start_time || ''} ${m.end_time ? '~ '+m.end_time : ''} · ${m.creator_name||''}
                   </div>
+                  ${hasContent ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</div>` : ''}
                 </div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  ${hasMinutes ? '<span class="badge badge-done" style="font-size:10px">회의록</span>' : '<span class="badge badge-pending" style="font-size:10px">기록없음</span>'}
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                  ${hasContent ? '<span class="badge badge-done" style="font-size:10px">회의록</span>' : '<span class="badge badge-pending" style="font-size:10px">기록없음</span>'}
                   <span class="badge badge-${m.type}">${m.type === 'weekly' ? '주간' : '기술'}</span>
                 </div>
-                <div style="display:flex;gap:4px;margin-left:8px" onclick="event.stopPropagation()">
+                <div style="display:flex;gap:4px;margin-left:8px;flex-shrink:0" onclick="event.stopPropagation()">
                   <button class="btn btn-ghost btn-sm" onclick="openMeetingForm(${m.id})">수정</button>
                   <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteMeeting(${m.id})">삭제</button>
                 </div>
@@ -247,21 +251,21 @@ async function viewMeeting(id) {
       ${m.agenda ? `
         <div class="meeting-section">
           <h4>안건</h4>
-          <div class="meeting-content-box">${m.agenda}</div>
+          <div class="meeting-content-box" style="white-space:pre-wrap">${m.agenda}</div>
         </div>
       ` : ''}
 
       ${m.minutes ? `
         <div class="meeting-section">
           <h4>회의록</h4>
-          <div class="meeting-content-box minutes">${m.minutes}</div>
+          <div class="meeting-content-box minutes" style="white-space:pre-wrap">${m.minutes}</div>
         </div>
       ` : ''}
 
       ${m.decisions ? `
         <div class="meeting-section">
           <h4>결정사항</h4>
-          <div class="decisions-box">${m.decisions}</div>
+          <div class="decisions-box" style="white-space:pre-wrap">${m.decisions}</div>
         </div>
       ` : ''}
 
