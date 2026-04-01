@@ -118,15 +118,9 @@ async function openReportForm(reportId) {
       <label>내일 예정 작업</label>
       <textarea id="r-planned" rows="3" placeholder="내일 예정된 작업을 입력하세요">${report ? report.work_planned : ''}</textarea>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>특이사항</label>
-        <textarea id="r-special" rows="2" placeholder="특이사항이 있으면 입력하세요">${report ? report.special_notes : ''}</textarea>
-      </div>
-      <div class="form-group">
-        <label>안전사항</label>
-        <textarea id="r-safety" rows="2" placeholder="안전 관련 사항을 입력하세요">${report ? report.safety_notes : ''}</textarea>
-      </div>
+    <div class="form-group">
+      <label>특이사항</label>
+      <textarea id="r-special" rows="2" placeholder="특이사항이 있으면 입력하세요">${report ? report.special_notes : ''}</textarea>
     </div>`,
     `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
      <button class="btn btn-coral" onclick="saveReport()">저장</button>`
@@ -140,7 +134,6 @@ async function saveReport() {
     work_done: document.getElementById('r-done').value,
     work_planned: document.getElementById('r-planned').value,
     special_notes: document.getElementById('r-special').value,
-    safety_notes: document.getElementById('r-safety').value,
   };
   if (!data.user_id || !data.report_date) { toast('직원과 날짜를 선택하세요', 'error'); return; }
   try {
@@ -160,8 +153,7 @@ async function viewReport(id) {
     `업무보고 · ${r.name} · ${r.report_date}`,
     `<div class="meeting-section"><h4>금일 작업 내용</h4><p>${r.work_done || '-'}</p></div>
      <div class="meeting-section"><h4>내일 예정 작업</h4><p>${r.work_planned || '-'}</p></div>
-     ${r.special_notes ? `<div class="meeting-section"><h4>특이사항</h4><p>${r.special_notes}</p></div>` : ''}
-     ${r.safety_notes ? `<div class="meeting-section"><h4>안전사항</h4><p style="color:var(--red)">${r.safety_notes}</p></div>` : ''}`,
+     ${r.special_notes ? `<div class="meeting-section"><h4>특이사항</h4><p>${r.special_notes}</p></div>` : ''}`,
     `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
      <button class="btn btn-coral" onclick="modal.hide();editReport(${id})">수정</button>`
   );
