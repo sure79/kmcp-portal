@@ -168,60 +168,69 @@ router.get('/', async (req, res) => {
       fetch(shortUrl), fetch(midLandUrl), fetch(midTaUrl),
     ]);
 
-    const shortJson   = await safeJson(shortRes,   '단기예보');
-    const midLandJson = await safeJson(midLandRes,  '중기육상');
-    const midTaJson   = await safeJson(midTaRes,    '중기기온');
+    // 단기예보: 실패해도 중기 데이터만으로 계속 진행
+    let shortForecast = [];
+    let shortError = null;
+    try {
+      const shortJson = await safeJson(shortRes, '단기예보');
+      const rc = shortJson.response?.header?.resultCode;
+      if (rc !== '00') throw new Error(`단기예보 (${rc}): ${shortJson.response?.header?.resultMsg}`);
 
-    const rc = shortJson.response?.header?.resultCode;
-    if (rc !== '00') throw new Error(`단기예보 (${rc}): ${shortJson.response?.header?.resultMsg}`);
-
-    // 단기예보 파싱
-    const items = shortJson.response.body.items.item || [];
-    const daily = {};
-    for (const it of items) {
-      const dt = it.fcstDate;
-      if (!daily[dt]) daily[dt] = { TMP:[], TMX:null, TMN:null, POP:[], PTY:[], PCP:[], REH:[], WSD:[], SKY:[] };
-      const d = daily[dt];
-      switch (it.category) {
-        case 'TMP': d.TMP.push(Number(it.fcstValue)); break;
-        case 'TMX': d.TMX = Number(it.fcstValue); break;
-        case 'TMN': d.TMN = Number(it.fcstValue); break;
-        case 'POP': d.POP.push(Number(it.fcstValue)); break;
-        case 'PTY': d.PTY.push(Number(it.fcstValue)); break;
-        case 'PCP': d.PCP.push(parsePcp(it.fcstValue)); break;
-        case 'REH': d.REH.push(Number(it.fcstValue)); break;
-        case 'WSD': d.WSD.push(Number(it.fcstValue)); break;
-        case 'SKY': d.SKY.push(Number(it.fcstValue)); break;
+      const items = shortJson.response.body.items.item || [];
+      const daily = {};
+      for (const it of items) {
+        const dt = it.fcstDate;
+        if (!daily[dt]) daily[dt] = { TMP:[], TMX:null, TMN:null, POP:[], PTY:[], PCP:[], REH:[], WSD:[], SKY:[] };
+        const d = daily[dt];
+        switch (it.category) {
+          case 'TMP': d.TMP.push(Number(it.fcstValue)); break;
+          case 'TMX': d.TMX = Number(it.fcstValue); break;
+          case 'TMN': d.TMN = Number(it.fcstValue); break;
+          case 'POP': d.POP.push(Number(it.fcstValue)); break;
+          case 'PTY': d.PTY.push(Number(it.fcstValue)); break;
+          case 'PCP': d.PCP.push(parsePcp(it.fcstValue)); break;
+          case 'REH': d.REH.push(Number(it.fcstValue)); break;
+          case 'WSD': d.WSD.push(Number(it.fcstValue)); break;
+          case 'SKY': d.SKY.push(Number(it.fcstValue)); break;
+        }
       }
+
+      const shortDates = Object.keys(daily).sort().slice(0, midStart - 1);
+      shortForecast = shortDates.map(dt => {
+        const d      = daily[dt];
+        const maxPop = d.POP.length ? Math.max(...d.POP) : 0;
+        const avgSky = d.SKY.length ? Math.round(d.SKY.reduce((a,b)=>a+b,0)/d.SKY.length) : 1;
+        const maxPty = d.PTY.length ? Math.max(...d.PTY) : 0;
+        const rainSum= d.PCP.reduce((a,b)=>a+b, 0);
+        const maxWsd = d.WSD.length ? Math.max(...d.WSD) : 0;
+        const avgReh = d.REH.length ? Math.round(d.REH.reduce((a,b)=>a+b,0)/d.REH.length) : null;
+        return {
+          date:        dt,
+          tempMax:     d.TMX ?? (d.TMP.length ? Math.max(...d.TMP) : null),
+          tempMin:     d.TMN ?? (d.TMP.length ? Math.min(...d.TMP) : null),
+          precipProb:  maxPop,
+          precipSum:   rainSum > 0 ? Number(rainSum.toFixed(1)) : 0,
+          humidity:    avgReh,
+          windSpeed:   Math.round(maxWsd * 3.6),
+          weatherCode: skyPtyToWmo(avgSky, maxPty, maxPop),
+          source:      'short',
+        };
+      });
+    } catch(e) {
+      shortError = e.message;
+      console.warn('[날씨] 단기예보 실패 (중기만 사용):', e.message);
     }
 
-    const shortDates = Object.keys(daily).sort().slice(0, midStart - 1);
-    const shortForecast = shortDates.map(dt => {
-      const d      = daily[dt];
-      const maxPop = d.POP.length ? Math.max(...d.POP) : 0;
-      const avgSky = d.SKY.length ? Math.round(d.SKY.reduce((a,b)=>a+b,0)/d.SKY.length) : 1;
-      const maxPty = d.PTY.length ? Math.max(...d.PTY) : 0;
-      const rainSum= d.PCP.reduce((a,b)=>a+b, 0);
-      const maxWsd = d.WSD.length ? Math.max(...d.WSD) : 0;
-      const avgReh = d.REH.length ? Math.round(d.REH.reduce((a,b)=>a+b,0)/d.REH.length) : null;
-      return {
-        date:        dt,
-        tempMax:     d.TMX ?? (d.TMP.length ? Math.max(...d.TMP) : null),
-        tempMin:     d.TMN ?? (d.TMP.length ? Math.min(...d.TMP) : null),
-        precipProb:  maxPop,
-        precipSum:   rainSum > 0 ? Number(rainSum.toFixed(1)) : 0,
-        humidity:    avgReh,
-        windSpeed:   Math.round(maxWsd * 3.6),
-        weatherCode: skyPtyToWmo(avgSky, maxPty, maxPop),
-        source:      'short',
-      };
-    });
+    const midLandJson = await safeJson(midLandRes, '중기육상');
+    const midTaJson   = await safeJson(midTaRes,   '중기기온');
 
     // 중기예보 파싱
+    // 단기예보 미신청 시 오늘부터 중기 데이터로 최대한 채움
+    const effectiveMidStart = shortForecast.length > 0 ? midStart : 1;
     const midLand = midLandJson.response?.body?.items?.item?.[0] || {};
     const midTa   = midTaJson.response?.body?.items?.item?.[0]   || {};
     const midForecast = [];
-    for (let offset = midStart; offset <= midStart + 3; offset++) {
+    for (let offset = effectiveMidStart; offset <= midStart + 3; offset++) {
       const rainAm = Number(midLand[`rnSt${offset}Am`] ?? midLand[`rnSt${offset}`] ?? 0);
       const rainPm = Number(midLand[`rnSt${offset}Pm`] ?? midLand[`rnSt${offset}`] ?? 0);
       const wfAm   = midLand[`wf${offset}Am`] ?? midLand[`wf${offset}`] ?? '';
@@ -246,7 +255,12 @@ router.get('/', async (req, res) => {
 
     const forecast = [...shortForecast, ...midForecast].slice(0, 7);
     console.log(`[날씨] 성공: 단기 ${shortForecast.length}일 + 중기 ${midForecast.length}일`);
-    res.json({ forecast, updated: new Date().toISOString(), source: 'kma' });
+    res.json({
+      forecast,
+      updated: new Date().toISOString(),
+      source: 'kma',
+      ...(shortError ? { warning: '단기예보 미신청 — 공공데이터포털에서 VilageFcstInfoService_2.0 활용신청 필요' } : {}),
+    });
 
   } catch(e) {
     console.error('[날씨] 오류:', e.message);
