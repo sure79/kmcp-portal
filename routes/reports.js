@@ -96,7 +96,9 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { user_id, report_date, work_done, work_planned, special_notes, safety_notes, work_status } = req.body;
+    const { report_date, work_done, work_planned, special_notes, safety_notes, work_status } = req.body;
+    // 관리자는 다른 직원 보고서 작성 가능, 일반 사용자는 본인 것만
+    const user_id = req.session.isAdmin ? (req.body.user_id || req.session.userId) : req.session.userId;
     if (!user_id || !report_date) return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
     const status = work_status || 'in_progress';
 

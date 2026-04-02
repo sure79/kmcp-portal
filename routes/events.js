@@ -40,6 +40,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const { title, description, start_date, end_date, start_time, end_time, all_day, color, category } = req.body;
     if (!title || !start_date) return res.status(400).json({ error: '제목과 시작일은 필수입니다' });
+    if (end_date && end_date < start_date) return res.status(400).json({ error: '종료일은 시작일 이후여야 합니다' });
     const result = await db.run(
       `INSERT INTO events (title, description, start_date, end_date, start_time, end_time, all_day, color, category, created_by, created_name)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -60,7 +61,7 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const row = await db.get('SELECT * FROM events WHERE id = ?', req.params.id);
     if (!row) return res.status(404).json({ error: '없음' });
-    const isAdmin = req.session.role === 'admin';
+    const isAdmin = req.session.isAdmin;
     if (row.created_by !== req.session.userId && !isAdmin)
       return res.status(403).json({ error: '권한 없음' });
 
@@ -83,7 +84,7 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const row = await db.get('SELECT * FROM events WHERE id = ?', req.params.id);
     if (!row) return res.status(404).json({ error: '없음' });
-    const isAdmin = req.session.role === 'admin';
+    const isAdmin = req.session.isAdmin;
     if (row.created_by !== req.session.userId && !isAdmin)
       return res.status(403).json({ error: '권한 없음' });
     await db.run('DELETE FROM events WHERE id = ?', req.params.id);

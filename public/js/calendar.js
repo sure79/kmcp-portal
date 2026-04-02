@@ -166,18 +166,18 @@ function buildCalendar(tasks, reports, meetings, events = []) {
         <div class="cal-day-num ${isToday ? 'today-num' : ''}">${d}</div>
         <div class="cal-day-events">
           ${dayEvents.slice(0, 2).map(ev => `
-            <div class="cal-event schedule" style="background:${ev.color}22;color:${ev.color};border-left:2px solid ${ev.color}" title="${ev.title}">
-              ${ev.title}
+            <div class="cal-event schedule" style="background:${ev.color}22;color:${ev.color};border-left:2px solid ${ev.color}" title="${escHtml(ev.title)}">
+              ${escHtml(ev.title)}
             </div>
           `).join('')}
           ${dayMeetings.slice(0, 1).map(m => `
-            <div class="cal-event meeting" title="${m.title || '회의'}">
-              ${m.start_time ? m.start_time.slice(0,5) + ' ' : ''}${m.title || '회의'}
+            <div class="cal-event meeting" title="${escHtml(m.title || '회의')}">
+              ${m.start_time ? m.start_time.slice(0,5) + ' ' : ''}${escHtml(m.title || '회의')}
             </div>
           `).join('')}
           ${dayTasks.slice(0, 1).map(t => `
-            <div class="cal-event task ${t.isDue ? 'due' : ''}" title="${t.title}">
-              ${t.isDue ? '⏰ ' : ''}${t.title}
+            <div class="cal-event task ${t.isDue ? 'due' : ''}" title="${escHtml(t.title)}">
+              ${t.isDue ? '⏰ ' : ''}${escHtml(t.title)}
             </div>
           `).join('')}
           ${dayReports.length > 0 ? `
@@ -276,10 +276,10 @@ async function openDayDetail(dateStr) {
       ${dayEvents.map(ev => `
         <div class="day-item" style="border-left:3px solid ${ev.color};padding-left:10px">
           <div style="flex:1">
-            <strong>${ev.title}</strong>
+            <strong>${escHtml(ev.title)}</strong>
             ${ev.start_time ? `<span class="text-muted" style="margin-left:8px">${ev.start_time.slice(0,5)}${ev.end_time ? ' ~ '+ev.end_time.slice(0,5) : ''}</span>` : ''}
-            ${ev.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${ev.description}</div>` : ''}
-            <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">등록: ${ev.created_name}</div>
+            ${ev.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${escHtml(ev.description)}</div>` : ''}
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">등록: ${escHtml(ev.created_name)}</div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0">
             <button class="btn btn-ghost btn-sm" onclick="openEventForm(null,${ev.id})">편집</button>
@@ -297,7 +297,7 @@ async function openDayDetail(dateStr) {
       ${dayMeetings.map(m => `
         <div class="day-item meeting-item" onclick="modal.hide();navigateTo('meetings');setTimeout(()=>viewMeeting(${m.id}),500)">
           <span class="badge badge-${m.type}" style="font-size:10px">${m.type === 'weekly' ? '주간' : '기술'}</span>
-          <strong>${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}</strong>
+          <strong>${escHtml(m.title || (m.type === 'weekly' ? '주간회의' : '기술회의'))}</strong>
           <span class="text-muted">${m.start_time||''} ${m.end_time ? '~ '+m.end_time : ''}</span>
         </div>
       `).join('')}
@@ -313,10 +313,10 @@ async function openDayDetail(dateStr) {
         return `
           <div class="day-item task-item" onclick="modal.hide();navigateTo('kanban');setTimeout(()=>openTaskDetail(${t.id}),500)">
             <span style="color:${colors[t.priority]||'var(--blue)'};font-weight:700">●</span>
-            <strong>${t.title}</strong>
+            <strong>${escHtml(t.title)}</strong>
             <span class="badge badge-${t.status}" style="font-size:10px">${{pending:'대기',in_progress:'진행중',review:'검토'}[t.status]||t.status}</span>
-            ${t.assignee_name ? `<span class="text-muted">${t.assignee_name}</span>` : ''}
-            ${t.project_name ? `<span class="text-muted">· ${t.project_name}</span>` : ''}
+            ${t.assignee_name ? `<span class="text-muted">${escHtml(t.assignee_name)}</span>` : ''}
+            ${t.project_name ? `<span class="text-muted">· ${escHtml(t.project_name)}</span>` : ''}
           </div>
         `;
       }).join('')}
@@ -329,9 +329,9 @@ async function openDayDetail(dateStr) {
       <h4 class="day-section-title"><span class="cal-dot" style="background:#5DA283"></span> 업무보고 (${dayReports.length})</h4>
       ${dayReports.map(r => `
         <div class="day-item report-item" onclick="modal.hide();navigateTo('reports');setTimeout(()=>viewReport(${r.id}),500)">
-          <span class="avatar avatar-sm ${getAvatarColor(r.name)}">${(r.name||'?').slice(0,1)}</span>
-          <strong>${r.name}</strong>
-          <span class="text-muted" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(r.work_done||'').split('\n')[0]}</span>
+          <span class="avatar avatar-sm ${getAvatarColor(r.name)}">${escHtml((r.name||'?').slice(0,1))}</span>
+          <strong>${escHtml(r.name)}</strong>
+          <span class="text-muted" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml((r.work_done||'').split('\n')[0])}</span>
         </div>
       `).join('')}
     </div>`;

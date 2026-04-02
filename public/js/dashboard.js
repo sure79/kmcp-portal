@@ -144,7 +144,7 @@ async function renderDashboard() {
                 <div class="day">${m.meeting_date.slice(8,10)}</div>
               </div>
               <div class="meeting-info">
-                <div class="meeting-title">${m.title || (m.type === 'weekly' ? '주간회의' : '기술회의')}</div>
+                <div class="meeting-title">${escHtml(m.title || (m.type === 'weekly' ? '주간회의' : '기술회의'))}</div>
                 <div class="meeting-time">${m.start_time}${m.end_time ? ' ~ '+m.end_time : ''}</div>
               </div>
               <span class="badge badge-${m.type}">${m.type === 'weekly' ? '주간' : '기술'}</span>
@@ -160,7 +160,7 @@ async function renderDashboard() {
             ${pinnedNotices.map(n => `
               <div class="notice-item" style="padding:10px 0;border-bottom:1px solid var(--border-light)" onclick="navigateTo('notices')">
                 <span class="notice-pin" style="color:var(--coral)">📌</span>
-                <div class="notice-title">${n.title}</div>
+                <div class="notice-title">${escHtml(n.title)}</div>
                 <div class="notice-meta">${formatDateKo(n.created_at.split('T')[0])}</div>
               </div>
             `).join('')}
@@ -187,14 +187,14 @@ async function renderDashboard() {
           return `
             <div class="proj-dash-card ${urgency}" onclick="navigateTo('projects');setTimeout(()=>viewProject(${p.id}),300)">
               <div class="proj-dash-header">
-                <div class="proj-dash-name">${p.name}</div>
+                <div class="proj-dash-name">${escHtml(p.name)}</div>
                 ${daysLeft !== null ? `
                   <span class="proj-dash-dday ${urgency}">
                     ${daysLeft <= 0 ? 'D+'+Math.abs(daysLeft) : 'D-'+daysLeft}
                   </span>
                 ` : ''}
               </div>
-              <div class="proj-dash-desc">${(p.description || '').substring(0, 60)}</div>
+              <div class="proj-dash-desc">${escHtml((p.description || '').substring(0, 60))}</div>
               <div class="proj-dash-progress">
                 <div class="progress-bar" style="height:6px"><div class="progress-fill" style="width:${progress}%"></div></div>
                 <span class="proj-dash-pct">${progress}%</span>
@@ -205,7 +205,7 @@ async function renderDashboard() {
                 ${p.end_date ? `<span>마감 ${p.end_date.slice(5)}</span>` : ''}
               </div>
               <div class="proj-dash-members">
-                ${(p.members||[]).slice(0, 5).map(m => `<span class="avatar avatar-xs ${getAvatarColor(m.name)}" title="${m.name}">${m.name.slice(0,1)}</span>`).join('')}
+                ${(p.members||[]).slice(0, 5).map(m => `<span class="avatar avatar-xs ${getAvatarColor(m.name)}" title="${escHtml(m.name)}">${escHtml(m.name.slice(0,1))}</span>`).join('')}
               </div>
             </div>
           `;
@@ -246,7 +246,7 @@ async function renderDashboard() {
             <div class="avatar avatar-sm ${getAvatarColor(r.name)}">${(r.name||'?').slice(0,1)}</div>
             <div>
               <div style="font-weight:600;font-size:13px">${r.name}</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${(r.work_done || '').split('\n')[0]}</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escHtml((r.work_done || '').split('\n')[0])}</div>
             </div>
           </div>
         `).join('')}
@@ -273,9 +273,9 @@ function renderMyTaskItem(t) {
     <div class="my-task-item" onclick="navigateTo('kanban');setTimeout(()=>openTaskDetail(${t.id}),500)">
       <div class="my-task-check">${statusIcons[t.status] || '○'}</div>
       <div class="my-task-body">
-        <div class="my-task-title">${t.title}</div>
+        <div class="my-task-title">${escHtml(t.title)}</div>
         <div class="my-task-meta">
-          <span style="color:${colors[t.priority] || '#999'}">${t.project_name || '미분류'}</span>
+          <span style="color:${colors[t.priority] || '#999'}">${escHtml(t.project_name || '미분류')}</span>
           ${t.target_week ? `<span>· ${t.target_week}</span>` : ''}
         </div>
       </div>
@@ -347,10 +347,10 @@ function renderLunchPoll(poll, userId) {
             <div class="lunch-option ${isMyVote ? 'voted' : ''} ${isTop ? 'top' : ''}" onclick="voteLunch(${opt.id})">
               <div class="lunch-option-bar" style="width:${pct}%"></div>
               <div class="lunch-option-content">
-                <span class="lunch-option-name">${isTop ? '👑 ' : ''}${opt.name}</span>
+                <span class="lunch-option-name">${isTop ? '👑 ' : ''}${escHtml(opt.name)}</span>
                 <span class="lunch-option-info">
                   ${opt.vote_count}표 ${pct > 0 ? `(${pct}%)` : ''}
-                  ${opt.votes?.length ? `<span class="lunch-voters">${opt.votes.map(v=>v.name).join(', ')}</span>` : ''}
+                  ${opt.votes?.length ? `<span class="lunch-voters">${opt.votes.map(v=>escHtml(v.name)).join(', ')}</span>` : ''}
                 </span>
               </div>
               ${isMyVote ? '<span class="lunch-my-badge">내 선택</span>' : ''}
@@ -573,12 +573,12 @@ async function loadUpcomingEvents() {
         <div class="upcoming-event-item" onclick="navigateTo('calendar')">
           <div class="upcoming-event-bar" style="background:${ev.color}"></div>
           <div class="upcoming-event-body">
-            <div class="upcoming-event-title">${ev.title}</div>
+            <div class="upcoming-event-title">${escHtml(ev.title)}</div>
             <div class="upcoming-event-meta">
               <span>${dateStr}</span>
               ${timeStr ? `<span>${timeStr}</span>` : ''}
               ${catLabel ? `<span class="upcoming-event-cat">${catLabel}</span>` : ''}
-              <span style="color:var(--text-tertiary)">${ev.created_name}</span>
+              <span style="color:var(--text-tertiary)">${escHtml(ev.created_name)}</span>
             </div>
           </div>
         </div>`;
@@ -625,7 +625,7 @@ async function _renderTodoWidget(wrap) {
         <button class="td-check ${t.done ? 'td-checked' : ''}" onclick="toggleTodo(${t.id})" title="${t.done ? '되돌리기' : '완료'}">
           ${t.done ? `<svg width="10" height="8" viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
         </button>
-        <span class="td-text">${t.content}</span>
+        <span class="td-text">${escHtml(t.content)}</span>
         ${t.due_date ? `<span class="td-due ${new Date(t.due_date) < new Date() && !t.done ? 'td-due-over' : ''}">${t.due_date.slice(5).replace('-','/')}</span>` : ''}
         <button class="td-del" onclick="deleteTodo(${t.id})" title="삭제">
           <svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>

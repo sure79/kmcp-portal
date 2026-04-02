@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
 // 좋아요
 router.post('/:id/like', async (req, res) => {
   try {
-    const { user_id } = req.body;
+    const user_id = req.session.userId;
     const exists = await db.get('SELECT 1 FROM suggestion_likes WHERE suggestion_id=? AND user_id=?', req.params.id, user_id);
     if (exists) {
       await db.run('DELETE FROM suggestion_likes WHERE suggestion_id=? AND user_id=?', req.params.id, user_id);

@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
   try {
     const { name, department, position, username, password } = req.body;
     if (!name || !username || !password) return res.status(400).json({ error: '이름, 아이디, 비밀번호는 필수입니다.' });
-    if (password.length < 4) return res.status(400).json({ error: '비밀번호는 4자 이상이어야 합니다.' });
+    if (password.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
 
     const exists = await db.get('SELECT id FROM users WHERE username = ?', username);
     if (exists) return res.status(400).json({ error: '이미 사용 중인 아이디입니다.' });

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireAdmin } = require('../middleware/auth');
 
 // 10분 서버 캐시
 let _cache = null;
@@ -96,7 +97,7 @@ async function safeJson(response, label) {
 }
 
 // ── 진단 엔드포인트 (Railway 로그 없이 원인 확인용) ────────────────
-router.get('/debug', async (req, res) => {
+router.get('/debug', requireAdmin, async (req, res) => {
   const apiKey = process.env.WEATHER_API_KEY;
   if (!apiKey) return res.json({ step: 'NO_KEY', detail: 'WEATHER_API_KEY 환경변수가 설정되지 않았습니다.' });
 

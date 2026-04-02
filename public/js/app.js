@@ -2,6 +2,16 @@
 window._currentUser = null;
 window._socket = null;
 
+// XSS 방어: HTML 이스케이프
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // 아바타 색상 팔레트
 const AVATAR_COLORS = ['avatar-coral', 'avatar-purple', 'avatar-blue', 'avatar-green', 'avatar-yellow'];
 function getAvatarColor(name) {
