@@ -95,6 +95,7 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/weather', require('./routes/weather'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/todos', require('./routes/todos'));
+app.use('/api/fieldtrips', require('./routes/fieldtrips'));
 
 // ===== 글로벌 검색 =====
 app.get('/api/search', (req, res, next) => {

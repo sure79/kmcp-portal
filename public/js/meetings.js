@@ -74,6 +74,8 @@ async function loadMeetings() {
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
                   ${hasContent ? '<span class="badge badge-done" style="font-size:10px">회의록</span>' : '<span class="badge badge-pending" style="font-size:10px">기록없음</span>'}
+                  ${m.ai_summary ? '<span class="badge" style="font-size:10px;background:#FF6B3522;color:#FF6B35;border:1px solid #FF6B3544">🔥 AI요약</span>' : ''}
+                  ${(()=>{try{const a=JSON.parse(m.action_items||'[]');return a.length?`<span class="badge badge-active" style="font-size:10px">✅ ${a.length}액션</span>`:''}catch(e){return ''}})()}
                   <span class="badge badge-${m.type}">${m.type === 'weekly' ? '주간' : '기술'}</span>
                 </div>
                 <div style="display:flex;gap:4px;margin-left:8px;flex-shrink:0" onclick="event.stopPropagation()">
@@ -138,6 +140,28 @@ async function openMeetingForm(meetingId) {
      <div class="form-group"><label>안건</label><textarea id="m-agenda" rows="3" placeholder="회의 안건을 입력하세요">${meeting?.agenda||''}</textarea></div>
      <div class="form-group"><label>회의록</label><textarea id="m-minutes" rows="5" placeholder="직접 입력하거나 위 녹음 파일 업로드를 사용하세요">${meeting?.minutes||''}</textarea></div>
      <div class="form-group"><label>결정사항</label><textarea id="m-decisions" rows="3" placeholder="회의에서 결정된 사항을 입력하세요">${meeting?.decisions||''}</textarea></div>
+
+     <!-- Fireflies AI 요약 섹션 -->
+     <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+       <div class="form-group">
+         <label style="display:flex;align-items:center;gap:8px">
+           🔥 Fireflies AI 요약
+           <span style="font-size:11px;font-weight:400;color:var(--text-tertiary)">fireflies.ai 에서 복사한 요약을 붙여넣으세요</span>
+         </label>
+         <textarea id="m-ai-summary" rows="4" placeholder="Fireflies 회의 요약 내용을 여기에 붙여넣으세요...">${meeting?.ai_summary||''}</textarea>
+       </div>
+       <div class="form-group">
+         <label>Fireflies 링크 <span style="font-size:11px;font-weight:400;color:var(--text-tertiary)">(선택)</span></label>
+         <input type="url" id="m-fireflies-url" value="${meeting?.fireflies_url||''}" placeholder="https://app.fireflies.ai/...">
+       </div>
+       <div class="form-group">
+         <label style="display:flex;align-items:center;gap:8px">
+           ✅ 액션 아이템
+           <span style="font-size:11px;font-weight:400;color:var(--text-tertiary)">한 줄에 하나씩 입력 — 저장 후 칸반으로 바로 생성 가능</span>
+         </label>
+         <textarea id="m-action-items" rows="3" placeholder="예:\n보고서 초안 작성 (@홍길동)\n장비 발주 확인 (@이순신)\n다음 회의 일정 조율">${(()=>{try{const a=JSON.parse(meeting?.action_items||'[]');return Array.isArray(a)?a.join('\n'):''}catch(e){return meeting?.action_items||''}})()}</textarea>
+       </div>
+     </div>
      <div class="form-group">
        <label>참석자</label>
        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">
@@ -209,6 +233,8 @@ async function transcribeAudio(input) {
 
 async function saveMeeting(meetingId) {
   const attendeeIds = Array.from(document.querySelectorAll('input[name="m-attendee"]:checked')).map(el => parseInt(el.value));
+  const actionText = document.getElementById('m-action-items')?.value || '';
+  const action_items = actionText.split('\n').map(s => s.trim()).filter(Boolean);
   const data = {
     type: document.getElementById('m-type').value,
     meeting_date: document.getElementById('m-date').value,
@@ -218,6 +244,9 @@ async function saveMeeting(meetingId) {
     agenda: document.getElementById('m-agenda').value,
     minutes: document.getElementById('m-minutes').value,
     decisions: document.getElementById('m-decisions').value,
+    ai_summary: document.getElementById('m-ai-summary')?.value || '',
+    action_items,
+    fireflies_url: document.getElementById('m-fireflies-url')?.value || '',
     created_by: window._currentUser?.id,
     attendee_ids: attendeeIds,
   };
@@ -269,7 +298,38 @@ async function viewMeeting(id) {
         </div>
       ` : ''}
 
-      ${!m.agenda && !m.minutes && !m.decisions ? `
+      ${m.ai_summary ? `
+        <div class="meeting-section">
+          <h4 style="display:flex;align-items:center;gap:8px">🔥 Fireflies AI 요약
+            ${m.fireflies_url ? `<a href="${escHtml(m.fireflies_url)}" target="_blank" style="font-size:11px;font-weight:400;color:var(--blue)">원본 보기 →</a>` : ''}
+          </h4>
+          <div class="meeting-content-box" style="white-space:pre-wrap;background:var(--surface-2,var(--surface));border-left:3px solid #FF6B35">${escHtml(m.ai_summary)}</div>
+        </div>
+      ` : ''}
+
+      ${(()=>{
+        try {
+          const items = JSON.parse(m.action_items||'[]');
+          if (!Array.isArray(items) || !items.length) return '';
+          return `
+            <div class="meeting-section">
+              <h4 style="display:flex;align-items:center;gap:8px">✅ 액션 아이템 (${items.length}개)
+                <button class="btn btn-ghost btn-sm" onclick="createTasksFromMeeting(${id})" style="margin-left:auto">
+                  📌 칸반에 추가
+                </button>
+              </h4>
+              <div class="action-items-list">
+                ${items.map((item,i) => `
+                  <div class="action-item-row">
+                    <span class="action-item-num">${i+1}</span>
+                    <span class="action-item-text">${escHtml(item)}</span>
+                  </div>`).join('')}
+              </div>
+            </div>`;
+        } catch(e) { return ''; }
+      })()}
+
+      ${!m.agenda && !m.minutes && !m.decisions && !m.ai_summary ? `
         <div class="empty-state" style="padding:32px">
           <div class="empty-icon">📝</div>
           <p>아직 회의록이 작성되지 않았습니다</p>
@@ -305,6 +365,81 @@ async function viewMeeting(id) {
 
   // 댓글 렌더링
   renderComments(`meeting-comments-${id}`, 'meeting', id);
+}
+
+async function createTasksFromMeeting(meetingId) {
+  const m = await api.meetings.get(meetingId).catch(() => null);
+  if (!m) return;
+  let items = [];
+  try { items = JSON.parse(m.action_items || '[]'); } catch(e) {}
+  if (!items.length) { toast('액션 아이템이 없습니다', 'error'); return; }
+
+  const users = await api.users.list().catch(() => []);
+  const today = new Date().toISOString().split('T')[0];
+
+  const userOpts = users.map(u => `<option value="${u.id}">${escHtml(u.name)}</option>`).join('');
+  const itemRows = items.map((item, i) => `
+    <div class="action-kanban-row">
+      <span class="action-item-num">${i+1}</span>
+      <span class="action-item-text" style="flex:1">${escHtml(item)}</span>
+      <select class="action-assignee" data-idx="${i}" style="width:100px;font-size:12px">
+        <option value="">담당자</option>${userOpts}
+      </select>
+    </div>`).join('');
+
+  modal.show('📌 칸반에 추가',
+    `<p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+       아래 액션 아이템들이 칸반 보드 "대기중"에 추가됩니다.
+     </p>
+     <div style="margin-bottom:16px">${itemRows}</div>
+     <div class="form-row">
+       <div class="form-group">
+         <label>마감일 (선택)</label>
+         <input type="date" id="action-due-date" value="">
+       </div>
+       <div class="form-group">
+         <label>프로젝트 연결 (선택)</label>
+         <select id="action-project"><option value="">미연결</option></select>
+       </div>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
+     <button class="btn btn-coral" onclick="_doCreateTasksFromMeeting(${meetingId}, ${JSON.stringify(items).replace(/'/g,'&#39;')})">추가</button>`
+  );
+
+  // 프로젝트 목록 로드
+  api.projects.list().then(projs => {
+    const sel = document.getElementById('action-project');
+    if (!sel) return;
+    projs.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+async function _doCreateTasksFromMeeting(meetingId, items) {
+  const dueDate = document.getElementById('action-due-date')?.value || null;
+  const projectId = document.getElementById('action-project')?.value || null;
+  const assignees = document.querySelectorAll('.action-assignee');
+  let count = 0;
+  for (let i = 0; i < items.length; i++) {
+    const assigneeId = assignees[i]?.value || null;
+    try {
+      await api.tasks.create({
+        title: items[i],
+        assignee_id: assigneeId || null,
+        project_id: projectId || null,
+        due_date: dueDate || null,
+        status: 'pending',
+        priority: 'medium',
+      });
+      count++;
+    } catch(e) {}
+  }
+  modal.hide();
+  toast(`${count}개 작업이 칸반에 추가되었습니다`);
 }
 
 async function confirmAttendance(meetingId) {

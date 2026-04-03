@@ -34,12 +34,13 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { type, meeting_date, start_time, end_time, title, agenda, minutes, decisions, created_by, attendee_ids } = req.body;
+    const { type, meeting_date, start_time, end_time, title, agenda, minutes, decisions, created_by, attendee_ids, ai_summary, action_items, fireflies_url } = req.body;
     if (!type || !meeting_date) return res.status(400).json({ error: '회의 유형과 날짜는 필수입니다.' });
 
     const result = await db.run(
-      'INSERT INTO meetings (type, meeting_date, start_time, end_time, title, agenda, minutes, decisions, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      type, meeting_date, start_time||'', end_time||'', title||'', agenda||'', minutes||'', decisions||'', created_by||null);
+      'INSERT INTO meetings (type, meeting_date, start_time, end_time, title, agenda, minutes, decisions, created_by, ai_summary, action_items, fireflies_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      type, meeting_date, start_time||'', end_time||'', title||'', agenda||'', minutes||'', decisions||'', created_by||null,
+      ai_summary||'', JSON.stringify(action_items||[]), fireflies_url||'');
 
     const meetingId = result.lastInsertRowid;
     if (attendee_ids && attendee_ids.length > 0) {
@@ -54,10 +55,11 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { type, meeting_date, start_time, end_time, title, agenda, minutes, decisions, attendee_ids } = req.body;
+    const { type, meeting_date, start_time, end_time, title, agenda, minutes, decisions, attendee_ids, ai_summary, action_items, fireflies_url } = req.body;
     await db.run(
-      'UPDATE meetings SET type=?, meeting_date=?, start_time=?, end_time=?, title=?, agenda=?, minutes=?, decisions=? WHERE id=?',
-      type, meeting_date, start_time||'', end_time||'', title||'', agenda||'', minutes||'', decisions||'', req.params.id);
+      'UPDATE meetings SET type=?, meeting_date=?, start_time=?, end_time=?, title=?, agenda=?, minutes=?, decisions=?, ai_summary=?, action_items=?, fireflies_url=? WHERE id=?',
+      type, meeting_date, start_time||'', end_time||'', title||'', agenda||'', minutes||'', decisions||'',
+      ai_summary||'', JSON.stringify(action_items||[]), fireflies_url||'', req.params.id);
 
     if (attendee_ids !== undefined) {
       await db.run('DELETE FROM meeting_attendees WHERE meeting_id = ?', req.params.id);

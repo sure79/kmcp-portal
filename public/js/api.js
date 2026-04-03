@@ -80,6 +80,20 @@ const api = {
     create: (d) => api.post('/api/projects', d),
     update: (id, d) => api.put(`/api/projects/${id}`, d),
     delete: (id) => api.delete(`/api/projects/${id}`),
+    milestones: {
+      list: (pid) => api.get(`/api/projects/${pid}/milestones`),
+      upcoming: (p) => api.get(`/api/projects/milestones/upcoming?${new URLSearchParams(p||{})}`),
+      create: (pid, d) => api.post(`/api/projects/${pid}/milestones`, d),
+      update: (pid, mid, d) => api.put(`/api/projects/${pid}/milestones/${mid}`, d),
+      delete: (pid, mid) => api.delete(`/api/projects/${pid}/milestones/${mid}`),
+    },
+  },
+  fieldtrips: {
+    list: (p) => api.get(`/api/fieldtrips?${new URLSearchParams(p||{})}`),
+    get: (id) => api.get(`/api/fieldtrips/${id}`),
+    create: (d) => api.post('/api/fieldtrips', d),
+    update: (id, d) => api.put(`/api/fieldtrips/${id}`, d),
+    delete: (id) => api.delete(`/api/fieldtrips/${id}`),
   },
   notices: {
     list: () => api.get('/api/notices'),

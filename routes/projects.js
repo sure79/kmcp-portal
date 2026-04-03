@@ -38,18 +38,22 @@ router.get('/:id', async (req, res) => {
     const tasks = await db.all(
       'SELECT t.*, u.name as assignee_name FROM tasks t LEFT JOIN users u ON t.assignee_id = u.id WHERE t.project_id = ? ORDER BY t.status, t.sort_order',
       req.params.id);
-    res.json({ ...project, members, tasks });
+    const milestones = await db.all(
+      'SELECT * FROM project_milestones WHERE project_id = ? ORDER BY due_date ASC',
+      req.params.id);
+    res.json({ ...project, members, tasks, milestones });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, start_date, end_date, created_by, member_ids } = req.body;
+    const { name, description, start_date, end_date, created_by, member_ids, project_type, org_name, total_budget, grant_number } = req.body;
     if (!name) return res.status(400).json({ error: '프로젝트명은 필수입니다.' });
 
     const result = await db.run(
-      'INSERT INTO projects (name, description, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?)',
-      name, description||'', start_date||null, end_date||null, created_by||null);
+      'INSERT INTO projects (name, description, start_date, end_date, created_by, project_type, org_name, total_budget, grant_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      name, description||'', start_date||null, end_date||null, created_by||null,
+      project_type||'regular', org_name||'', total_budget||'', grant_number||'');
     const pid = result.lastInsertRowid;
 
     if (member_ids && member_ids.length > 0) {
@@ -64,10 +68,11 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { name, description, progress, start_date, end_date, status, member_ids } = req.body;
+    const { name, description, progress, start_date, end_date, status, member_ids, project_type, org_name, total_budget, grant_number } = req.body;
     await db.run(
-      'UPDATE projects SET name=?, description=?, progress=?, start_date=?, end_date=?, status=? WHERE id=?',
-      name, description||'', progress||0, start_date||null, end_date||null, status||'active', req.params.id);
+      'UPDATE projects SET name=?, description=?, progress=?, start_date=?, end_date=?, status=?, project_type=?, org_name=?, total_budget=?, grant_number=? WHERE id=?',
+      name, description||'', progress||0, start_date||null, end_date||null, status||'active',
+      project_type||'regular', org_name||'', total_budget||'', grant_number||'', req.params.id);
 
     if (member_ids !== undefined) {
       await db.run('DELETE FROM project_members WHERE project_id = ?', req.params.id);
@@ -83,6 +88,57 @@ router.delete('/:id', async (req, res) => {
   try {
     await db.run('DELETE FROM projects WHERE id = ?', req.params.id);
     res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── 마일스톤 CRUD ──────────────────────────────────────────────
+router.get('/:id/milestones', async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM project_milestones WHERE project_id = ? ORDER BY due_date ASC', req.params.id);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:id/milestones', async (req, res) => {
+  try {
+    const { title, due_date, milestone_type, description } = req.body;
+    if (!title || !due_date) return res.status(400).json({ error: '제목과 날짜는 필수입니다.' });
+    const result = await db.run(
+      'INSERT INTO project_milestones (project_id, title, due_date, milestone_type, description) VALUES (?, ?, ?, ?, ?)',
+      req.params.id, title, due_date, milestone_type||'general', description||'');
+    res.json({ id: result.lastInsertRowid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/:id/milestones/:mid', async (req, res) => {
+  try {
+    const { title, due_date, milestone_type, status, description } = req.body;
+    await db.run(
+      'UPDATE project_milestones SET title=?, due_date=?, milestone_type=?, status=?, description=? WHERE id=? AND project_id=?',
+      title, due_date, milestone_type||'general', status||'pending', description||'', req.params.mid, req.params.id);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:id/milestones/:mid', async (req, res) => {
+  try {
+    await db.run('DELETE FROM project_milestones WHERE id=? AND project_id=?', req.params.mid, req.params.id);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// 전체 마일스톤 조회 (달력/대시보드용)
+router.get('/milestones/upcoming', async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    let sql = `SELECT pm.*, p.name as project_name, p.project_type FROM project_milestones pm
+               JOIN projects p ON pm.project_id = p.id WHERE 1=1`;
+    const params = [];
+    if (start) { sql += ' AND pm.due_date >= ?'; params.push(start); }
+    if (end)   { sql += ' AND pm.due_date <= ?'; params.push(end); }
+    sql += ' ORDER BY pm.due_date ASC';
+    const rows = await db.all(sql, ...params);
+    res.json(rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

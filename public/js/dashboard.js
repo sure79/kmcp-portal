@@ -229,6 +229,9 @@ async function renderDashboard() {
     </div>
     ` : ''}
 
+    <!-- 외근·출장 + 마일스톤 -->
+    <div id="fieldtrip-milestone-row"></div>
+
     <!-- 팀 보고 현황 -->
     <div class="card mt-16" id="team-report-section">
       <div class="card-header">
@@ -258,6 +261,8 @@ async function renderDashboard() {
   loadBusanWeather();
   loadUpcomingEvents();
   loadTodoWidget();
+  loadTodayFieldTrips();
+  loadUpcomingMilestones();
 }
 
 function renderMyTaskItem(t) {
@@ -690,3 +695,78 @@ async function deleteTodo(id) {
     if (window._renderTodo) window._renderTodo();
   } catch(e) {}
 }
+
+// ===== 오늘의 외근 현황 =====
+async function loadTodayFieldTrips() {
+  const today = new Date().toISOString().split('T')[0];
+  const wrap = document.getElementById('fieldtrip-milestone-row');
+  if (!wrap) return;
+
+  try {
+    const [trips, milestones] = await Promise.all([
+      api.fieldtrips.list({ date: today }).catch(() => []),
+      api.projects.milestones.upcoming({ start: today, end: (() => { const d = new Date(); d.setDate(d.getDate()+30); return d.toISOString().split('T')[0]; })() }).catch(() => []),
+    ]);
+
+    const hasFT = trips.length > 0;
+    const upcomingMS = milestones.slice(0, 5);
+    if (!hasFT && !upcomingMS.length) { wrap.innerHTML = ''; return; }
+
+    let html = '<div class="grid grid-2" style="margin-top:0">';
+
+    // 외근 카드
+    if (hasFT) {
+      html += `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🚗 오늘 외근 · 출장</div>
+            <button class="btn btn-ghost btn-sm" onclick="navigateTo('fieldtrips')">전체 →</button>
+          </div>
+          ${trips.map(ft => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)">
+              <div class="avatar avatar-sm ${getAvatarColor(ft.name)}">${(ft.name||'?').slice(0,1)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:13px">${escHtml(ft.name)}</div>
+                <div style="font-size:12px;color:var(--text-secondary)">📍 ${escHtml(ft.destination)}${ft.purpose ? ' · '+escHtml(ft.purpose) : ''}</div>
+              </div>
+              ${ft.return_time ? `<span style="font-size:11px;color:var(--text-tertiary)">복귀 ${ft.return_time}</span>` : ''}
+            </div>`).join('')}
+        </div>`;
+    } else {
+      html += '<div></div>';
+    }
+
+    // 마일스톤 카드
+    if (upcomingMS.length) {
+      const today2 = today;
+      html += `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏁 다가오는 마일스톤</div>
+            <button class="btn btn-ghost btn-sm" onclick="navigateTo('projects')">전체 →</button>
+          </div>
+          ${upcomingMS.map(ms => {
+            const daysLeft = Math.ceil((new Date(ms.due_date) - new Date(today2)) / 86400000);
+            const urgency = daysLeft <= 0 ? 'var(--red)' : daysLeft <= 7 ? 'var(--yellow)' : 'var(--text-tertiary)';
+            const dLabel = daysLeft <= 0 ? `D+${Math.abs(daysLeft)}` : `D-${daysLeft}`;
+            return `
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)">
+                <div style="min-width:36px;text-align:center;font-size:12px;font-weight:700;color:${urgency}">${dLabel}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:500">${escHtml(ms.title)}</div>
+                  <div style="font-size:11px;color:var(--text-tertiary)">${escHtml(ms.project_name||'')} · ${ms.due_date}</div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    html += '</div>';
+    wrap.innerHTML = html;
+  } catch(e) {
+    wrap.innerHTML = '';
+  }
+}
+
+// loadTodayFieldTrips가 두 역할(외근+마일스톤)을 하므로 별도 함수는 빈 래퍼
+async function loadUpcomingMilestones() {}

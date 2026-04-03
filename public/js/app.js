@@ -30,6 +30,7 @@ const pageRenderers = {
   kanban: renderKanban,
   projects: renderProjects,
   meetings: renderMeetings,
+  fieldtrips: renderFieldTrips,
   notices: renderNotices,
   suggestions: renderSuggestions,
   polls: renderPolls,

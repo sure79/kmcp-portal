@@ -307,8 +307,53 @@ async function initDB() {
   try { await db.exec('ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 0'); } catch(e) { /* 이미 존재 */ }
   // 마이그레이션: 업무보고 진행상태 컬럼 추가
   try { await db.exec("ALTER TABLE daily_reports ADD COLUMN work_status TEXT DEFAULT 'in_progress'"); } catch(e) { /* 이미 존재 */ }
+  // 마이그레이션: 회의 AI 요약·액션아이템·Fireflies URL 컬럼 추가
+  try { await db.exec("ALTER TABLE meetings ADD COLUMN ai_summary TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
+  try { await db.exec("ALTER TABLE meetings ADD COLUMN action_items TEXT DEFAULT '[]'"); } catch(e) { /* 이미 존재 */ }
+  try { await db.exec("ALTER TABLE meetings ADD COLUMN fireflies_url TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
+  // 마이그레이션: 프로젝트 국가과제 컬럼 추가
+  try { await db.exec("ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT 'regular'"); } catch(e) { /* 이미 존재 */ }
+  try { await db.exec("ALTER TABLE projects ADD COLUMN org_name TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
+  try { await db.exec("ALTER TABLE projects ADD COLUMN total_budget TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
+  try { await db.exec("ALTER TABLE projects ADD COLUMN grant_number TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
   // 기존 사용자 전부 승인 처리
   await db.run('UPDATE users SET is_approved = 1 WHERE is_approved = 0 OR is_approved IS NULL');
+
+  // 국가과제 마일스톤 테이블
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS project_milestones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        due_date DATE NOT NULL,
+        milestone_type TEXT DEFAULT 'general',
+        status TEXT DEFAULT 'pending',
+        description TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+    `);
+  } catch(e) { console.error('project_milestones 테이블:', e.message); }
+
+  // 외근/출장 기록 테이블
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS field_trips (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_date DATE NOT NULL,
+        destination TEXT NOT NULL,
+        organization TEXT DEFAULT '',
+        purpose TEXT DEFAULT '',
+        depart_time TEXT DEFAULT '',
+        return_time TEXT DEFAULT '',
+        note TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  } catch(e) { console.error('field_trips 테이블:', e.message); }
 
   // 기본 관리자 계정 생성
   const adminExists = await db.get('SELECT id FROM users WHERE username = ?', 'admin');

@@ -2018,3 +2018,166 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ===== 회의 강화: 액션 아이템 / Fireflies ===== */
+.action-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.action-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.action-item-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  min-width: 16px;
+  margin-top: 1px;
+}
+.action-item-text { flex: 1; color: var(--text); }
+.action-kanban-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+/* ===== 국가과제 스타일 ===== */
+.national-project {
+  border-left: 3px solid var(--blue) !important;
+}
+.national-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  background: var(--blue-light);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.national-info-box {
+  background: var(--blue-light);
+  border: 1px solid #c5d5f8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+.national-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.national-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+/* 마일스톤 */
+.milestone-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.milestone-row:last-child { border-bottom: none; }
+.milestone-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.milestone-body { flex: 1; min-width: 0; }
+.milestone-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.milestone-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+.milestone-type-tag {
+  background: var(--yellow-light);
+  color: #b07d10;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ===== 외근 · 출장 ===== */
+.ft-date-group { margin-bottom: 20px; }
+.ft-date-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ft-date-header.ft-today { color: var(--coral); }
+.ft-today-tag {
+  font-size: 10px;
+  background: var(--coral-light);
+  color: var(--coral);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 600;
+}
+.ft-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.ft-item:last-child { border-bottom: none; }
+.ft-item-body { flex: 1; min-width: 0; }
+.ft-item-name { font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 4px; }
+.ft-item-dest { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.ft-dest-tag {
+  font-weight: 500;
+  color: var(--text);
+}
+.ft-item-purpose {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+.ft-item-time {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+.ft-item-note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+  font-style: italic;
+}
