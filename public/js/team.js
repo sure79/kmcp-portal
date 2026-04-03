@@ -41,18 +41,25 @@ async function renderTeam() {
 
 async function loadTeamData() {
   const date = document.getElementById('team-date')?.value || new Date().toISOString().split('T')[0];
-  const [users, reports, statuses] = await Promise.all([
+  const [users, reports, statuses, fieldtrips] = await Promise.all([
     api.users.list(),
     api.reports.team(date),
     api.status.list(date),
+    api.fieldtrips.list({ date }).catch(() => []),
   ]);
   const reportMap = {};
   reports.forEach(r => reportMap[r.user_id] = r);
   const statusMap = {};
   statuses.forEach(s => statusMap[s.user_id] = s);
+  // 오늘 외근 기록 (user_id → 배열)
+  const tripMap = {};
+  fieldtrips.forEach(ft => {
+    if (!tripMap[ft.user_id]) tripMap[ft.user_id] = [];
+    tripMap[ft.user_id].push(ft);
+  });
 
   // 상태 보드 렌더
-  renderStatusBoard(users, statusMap);
+  renderStatusBoard(users, statusMap, tripMap);
 
   // 팀 보고서 그리드
   const grid = document.getElementById('team-grid');
@@ -79,33 +86,45 @@ async function loadTeamData() {
           const stInfo = STATUS_OPTIONS[st?.status] || STATUS_OPTIONS.office;
           const initials = u.name.slice(0, 1);
           const colorClass = getAvatarColor(u.name);
+          const trips = tripMap[u.id] || [];
+          const isOutside = st?.status === 'outside' || st?.status === 'business_trip';
           return `
             <div class="card team-member-card">
               <div class="team-member-header">
                 <div class="avatar ${colorClass}">${initials}</div>
                 <div style="flex:1">
-                  <div class="member-name">${u.name}</div>
-                  <div class="member-dept">${u.position || ''}</div>
+                  <div class="member-name">${escHtml(u.name)}</div>
+                  <div class="member-dept">${escHtml(u.position || '')}</div>
                 </div>
                 <span class="status-chip" style="background:${stInfo.bg};color:${stInfo.color}">${stInfo.icon} ${stInfo.label}</span>
               </div>
+              ${isOutside && trips.length > 0 ? `
+                <div class="ft-team-box">
+                  ${trips.map(ft => `
+                    <div class="ft-team-row">
+                      <span class="ft-team-dest">📍 ${escHtml(ft.destination)}</span>
+                      ${ft.organization ? `<span class="ft-team-org">${escHtml(ft.organization)}</span>` : ''}
+                      ${ft.purpose ? `<span class="ft-team-purpose">· ${escHtml(ft.purpose)}</span>` : ''}
+                      ${ft.return_time ? `<span class="ft-team-return">복귀 ${ft.return_time}</span>` : ''}
+                    </div>`).join('')}
+                </div>` : ''}
               <div class="team-member-body">
                 ${r ? `
                   <div class="report-item">
                     <span class="report-label">금일작업</span>
-                    <span class="report-content">${formatMultiline(r.work_done)}</span>
+                    <span class="report-content">${formatMultiline(escHtml(r.work_done))}</span>
                   </div>
                   <div class="report-item">
                     <span class="report-label">예정작업</span>
-                    <span class="report-content">${formatMultiline(r.work_planned)}</span>
+                    <span class="report-content">${formatMultiline(escHtml(r.work_planned))}</span>
                   </div>
                   ${r.special_notes ? `<div class="report-item">
                     <span class="report-label">특이사항</span>
-                    <span class="report-content" style="color:var(--coral)">${r.special_notes}</span>
+                    <span class="report-content" style="color:var(--coral)">${escHtml(r.special_notes)}</span>
                   </div>` : ''}
                   ${r.safety_notes ? `<div class="report-item">
                     <span class="report-label">안전사항</span>
-                    <span class="report-content" style="color:var(--red)">${r.safety_notes}</span>
+                    <span class="report-content" style="color:var(--red)">${escHtml(r.safety_notes)}</span>
                   </div>` : ''}
                 ` : `<div class="no-report">보고서 미제출</div>`}
               </div>
@@ -117,21 +136,21 @@ async function loadTeamData() {
   `).join('');
 }
 
-function renderStatusBoard(users, statusMap) {
+function renderStatusBoard(users, statusMap, tripMap = {}) {
   const board = document.getElementById('status-board');
-  // 상태별 그룹
   const groups = {};
   Object.keys(STATUS_OPTIONS).forEach(k => groups[k] = []);
 
   users.forEach(u => {
     const st = statusMap[u.id]?.status || 'office';
     if (!groups[st]) groups[st] = [];
-    groups[st].push({ ...u, note: statusMap[u.id]?.note || '' });
+    groups[st].push({ ...u, note: statusMap[u.id]?.note || '', trips: tripMap[u.id] || [] });
   });
 
   board.innerHTML = Object.entries(STATUS_OPTIONS).map(([key, info]) => {
     const members = groups[key] || [];
     if (key !== 'office' && members.length === 0) return '';
+    const isOutsideType = key === 'outside' || key === 'business_trip';
     return `
       <div class="status-group">
         <div class="status-group-header" style="border-left:3px solid ${info.color}">
@@ -142,10 +161,14 @@ function renderStatusBoard(users, statusMap) {
         <div class="status-group-members">
           ${members.length === 0 ? '<span class="text-muted" style="font-size:12px;padding:4px 8px">-</span>' :
             members.map(u => `
-              <div class="status-member-chip" title="${u.note || ''}">
-                <span class="avatar avatar-sm ${getAvatarColor(u.name)}">${u.name.slice(0,1)}</span>
-                <span>${u.name}</span>
-                ${u.note ? `<span class="status-note">${u.note}</span>` : ''}
+              <div class="status-member-chip ${isOutsideType && u.trips.length ? 'has-trip' : ''}" title="${escHtml(u.note || '')}">
+                <span class="avatar avatar-sm ${getAvatarColor(u.name)}">${escHtml(u.name.slice(0,1))}</span>
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span>${escHtml(u.name)}</span>
+                  ${isOutsideType && u.trips.length > 0
+                    ? `<span class="status-trip-detail">📍 ${escHtml(u.trips[0].destination)}${u.trips[0].return_time ? ' · 복귀 '+u.trips[0].return_time : ''}</span>`
+                    : (u.note ? `<span class="status-note">${escHtml(u.note)}</span>` : '')}
+                </div>
               </div>
             `).join('')}
         </div>

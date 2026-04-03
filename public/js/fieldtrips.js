@@ -1,3 +1,9 @@
+const TRIP_TYPES = {
+  outside:       { label: '외근',  icon: '🚗', color: '#4573D2' },
+  business_trip: { label: '출장',  icon: '✈️', color: '#E8384F' },
+  off:           { label: '휴가',  icon: '🌴', color: '#9CA6AF' },
+};
+
 async function renderFieldTrips() {
   const page = document.getElementById('page-fieldtrips');
   const today = new Date().toISOString().split('T')[0];
@@ -7,12 +13,12 @@ async function renderFieldTrips() {
   page.innerHTML = `
     <div class="page-header">
       <div>
-        <h2 class="page-title">외근 · 출장</h2>
-        <p class="page-subtitle">외근 및 출장 기록을 관리하세요</p>
+        <h2 class="page-title">외근 · 출장 · 휴가</h2>
+        <p class="page-subtitle">외근, 출장, 휴가 기록을 관리하고 팀 현황과 자동 연동됩니다</p>
       </div>
       <button class="btn btn-coral" onclick="openFieldTripForm()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        외근 등록
+        등록
       </button>
     </div>
     <div class="card">
@@ -78,11 +84,20 @@ async function loadFieldTrips() {
           <div class="ft-date-header ${isToday ? 'ft-today' : ''}">
             ${date} (${dayNames[d.getDay()]}) ${isToday ? '<span class="ft-today-tag">오늘</span>' : ''}
           </div>
-          ${items.map(ft => `
+          ${items.map(ft => {
+            const typeInfo = TRIP_TYPES[ft.trip_type||'outside'] || TRIP_TYPES.outside;
+            const isOff = ft.trip_type === 'off';
+            return `
             <div class="ft-item">
               <div class="avatar avatar-sm ${getAvatarColor(ft.name)}">${(ft.name||'?').slice(0,1)}</div>
               <div class="ft-item-body">
-                <div class="ft-item-name">${escHtml(ft.name)}</div>
+                <div class="ft-item-name" style="display:flex;align-items:center;gap:8px">
+                  ${escHtml(ft.name)}
+                  <span class="ft-type-tag" style="background:${typeInfo.color}22;color:${typeInfo.color};border:1px solid ${typeInfo.color}44">
+                    ${typeInfo.icon} ${typeInfo.label}
+                  </span>
+                </div>
+                ${!isOff ? `
                 <div class="ft-item-dest">
                   <span class="ft-dest-tag">📍 ${escHtml(ft.destination)}</span>
                   ${ft.organization ? `<span style="color:var(--text-secondary)">· ${escHtml(ft.organization)}</span>` : ''}
@@ -93,13 +108,15 @@ async function loadFieldTrips() {
                     ${ft.depart_time ? `🕐 출발 ${ft.depart_time}` : ''}
                     ${ft.return_time ? ` · 복귀 ${ft.return_time}` : ''}
                   </div>` : ''}
+                ` : ''}
                 ${ft.note ? `<div class="ft-item-note">${escHtml(ft.note)}</div>` : ''}
               </div>
               <div style="display:flex;gap:4px;margin-left:auto;flex-shrink:0" onclick="event.stopPropagation()">
                 <button class="btn btn-ghost btn-sm" onclick="openFieldTripForm(${ft.id})">수정</button>
                 <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteFieldTrip(${ft.id})">삭제</button>
               </div>
-            </div>`).join('')}
+            </div>`;
+          }).join('')}
         </div>`;
     }).join('');
 }
@@ -108,59 +125,83 @@ async function openFieldTripForm(tripId) {
   const today = new Date().toISOString().split('T')[0];
   let ft = null;
   if (tripId) ft = await api.fieldtrips.get(tripId).catch(() => null);
+  const currentType = ft?.trip_type || 'outside';
+  const isOff = currentType === 'off';
 
   modal.show(
-    tripId ? '외근 수정' : '외근 등록',
+    tripId ? '수정' : '외근 · 출장 · 휴가 등록',
     `<div class="form-row">
+       <div class="form-group">
+         <label>유형 *</label>
+         <select id="ft-type" onchange="_toggleFtFields(this.value)">
+           ${Object.entries(TRIP_TYPES).map(([k,v]) =>
+             `<option value="${k}" ${currentType===k?'selected':''}>${v.icon} ${v.label}</option>`
+           ).join('')}
+         </select>
+       </div>
        <div class="form-group">
          <label>날짜 *</label>
          <input type="date" id="ft-date" value="${ft?.trip_date || today}">
        </div>
-       <div class="form-group">
-         <label>목적지 *</label>
-         <input type="text" id="ft-dest" value="${ft?.destination || ''}" placeholder="예: 서울대학교, 한국기술센터">
-       </div>
      </div>
-     <div class="form-row">
-       <div class="form-group">
-         <label>방문기관</label>
-         <input type="text" id="ft-org" value="${ft?.organization || ''}" placeholder="예: 과기부, LG전자 R&D">
+     <div id="ft-trip-fields" style="${isOff?'display:none':''}">
+       <div class="form-row">
+         <div class="form-group">
+           <label>목적지 *</label>
+           <input type="text" id="ft-dest" value="${escHtml(ft?.destination || '')}" placeholder="예: 서울대학교, 한국기술센터">
+         </div>
+         <div class="form-group">
+           <label>방문기관</label>
+           <input type="text" id="ft-org" value="${escHtml(ft?.organization || '')}" placeholder="예: 과기부, LG전자 R&D">
+         </div>
        </div>
        <div class="form-group">
          <label>목적</label>
-         <input type="text" id="ft-purpose" value="${ft?.purpose || ''}" placeholder="예: 협약 미팅, 기술 발표">
+         <input type="text" id="ft-purpose" value="${escHtml(ft?.purpose || '')}" placeholder="예: 협약 미팅, 기술 발표">
        </div>
-     </div>
-     <div class="form-row">
-       <div class="form-group">
-         <label>출발 시간</label>
-         <input type="time" id="ft-depart" value="${ft?.depart_time || ''}">
-       </div>
-       <div class="form-group">
-         <label>복귀 예정</label>
-         <input type="time" id="ft-return" value="${ft?.return_time || ''}">
+       <div class="form-row">
+         <div class="form-group">
+           <label>출발 시간</label>
+           <input type="time" id="ft-depart" value="${ft?.depart_time || ''}">
+         </div>
+         <div class="form-group">
+           <label>복귀 예정</label>
+           <input type="time" id="ft-return" value="${ft?.return_time || ''}">
+         </div>
        </div>
      </div>
      <div class="form-group">
        <label>메모</label>
-       <textarea id="ft-note" rows="2" placeholder="추가 메모사항">${ft?.note || ''}</textarea>
+       <textarea id="ft-note" rows="2" placeholder="추가 메모사항">${escHtml(ft?.note || '')}</textarea>
+     </div>
+     <div style="font-size:12px;color:var(--blue);margin-top:8px">
+       💡 오늘 날짜로 등록하면 팀 현황 상태가 자동으로 업데이트됩니다
      </div>`,
     `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
      <button class="btn btn-coral" onclick="saveFieldTrip(${tripId || 'null'})">저장</button>`
   );
 }
 
+function _toggleFtFields(type) {
+  const el = document.getElementById('ft-trip-fields');
+  if (el) el.style.display = type === 'off' ? 'none' : '';
+}
+
 async function saveFieldTrip(tripId) {
+  const tripType = document.getElementById('ft-type')?.value || 'outside';
+  const isOff = tripType === 'off';
   const data = {
     trip_date: document.getElementById('ft-date').value,
-    destination: document.getElementById('ft-dest').value.trim(),
-    organization: document.getElementById('ft-org').value.trim(),
-    purpose: document.getElementById('ft-purpose').value.trim(),
-    depart_time: document.getElementById('ft-depart').value,
-    return_time: document.getElementById('ft-return').value,
-    note: document.getElementById('ft-note').value.trim(),
+    trip_type: tripType,
+    destination: isOff ? '휴가' : (document.getElementById('ft-dest')?.value.trim() || ''),
+    organization: isOff ? '' : (document.getElementById('ft-org')?.value.trim() || ''),
+    purpose: isOff ? '' : (document.getElementById('ft-purpose')?.value.trim() || ''),
+    depart_time: isOff ? '' : (document.getElementById('ft-depart')?.value || ''),
+    return_time: isOff ? '' : (document.getElementById('ft-return')?.value || ''),
+    note: document.getElementById('ft-note')?.value.trim() || '',
   };
-  if (!data.trip_date || !data.destination) { toast('날짜와 목적지를 입력하세요', 'error'); return; }
+  if (!data.trip_date) { toast('날짜를 입력하세요', 'error'); return; }
+  if (!isOff && !data.destination) { toast('목적지를 입력하세요', 'error'); return; }
   try {
     if (tripId) await api.fieldtrips.update(tripId, data);
     else await api.fieldtrips.create(data);

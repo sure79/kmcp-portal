@@ -343,6 +343,7 @@ async function initDB() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         trip_date DATE NOT NULL,
+        trip_type TEXT DEFAULT 'outside',
         destination TEXT NOT NULL,
         organization TEXT DEFAULT '',
         purpose TEXT DEFAULT '',
@@ -354,6 +355,24 @@ async function initDB() {
       );
     `);
   } catch(e) { console.error('field_trips 테이블:', e.message); }
+  // 마이그레이션: trip_type 컬럼 추가
+  try { await db.exec("ALTER TABLE field_trips ADD COLUMN trip_type TEXT DEFAULT 'outside'"); } catch(e) { /* 이미 존재 */ }
+
+  // 휴가 기록 테이블
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS leaves (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        leave_date DATE NOT NULL,
+        leave_type TEXT DEFAULT 'annual',
+        note TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, leave_date)
+      );
+    `);
+  } catch(e) { console.error('leaves 테이블:', e.message); }
 
   // 기본 관리자 계정 생성
   const adminExists = await db.get('SELECT id FROM users WHERE username = ?', 'admin');

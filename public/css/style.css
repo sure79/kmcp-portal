@@ -2181,3 +2181,39 @@ body {
   margin-top: 3px;
   font-style: italic;
 }
+
+/* 외근 유형 태그 */
+.ft-type-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+/* 팀 현황 - 외근 상세 */
+.ft-team-box {
+  background: var(--blue-light);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 6px 0 4px;
+}
+.ft-team-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.ft-team-dest { font-weight: 600; color: var(--blue); }
+.ft-team-org { color: var(--text-secondary); }
+.ft-team-purpose { color: var(--text-secondary); }
+.ft-team-return { margin-left: auto; color: var(--text-tertiary); font-size: 11px; }
+/* 상태 보드 - 외근 상세 */
+.status-trip-detail {
+  font-size: 11px;
+  color: var(--blue);
+  font-weight: 500;
+}
+.status-member-chip.has-trip {
+  align-items: flex-start;
+  padding: 6px 10px;
+}

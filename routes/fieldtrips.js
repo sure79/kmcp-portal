@@ -33,17 +33,36 @@ router.get('/:id', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// 오늘 기록이면 user_status 자동 업데이트
+async function syncStatusForTrip(user_id, trip_date, trip_type, destination, organization, return_time) {
+  const today = new Date().toISOString().split('T')[0];
+  if (trip_date !== today) return;
+  // trip_type → user_status status 매핑
+  const statusKey = trip_type === 'business_trip' ? 'business_trip'
+    : trip_type === 'off' ? 'off' : 'outside';
+  const statusNote = trip_type === 'off' ? '' :
+    [destination, organization ? `(${organization})` : '', return_time ? `복귀 ${return_time}` : ''].filter(Boolean).join(' · ');
+  const existing = await db.get('SELECT id FROM user_status WHERE user_id=? AND status_date=?', user_id, today);
+  if (existing) {
+    await db.run('UPDATE user_status SET status=?, note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', statusKey, statusNote, existing.id);
+  } else {
+    await db.run('INSERT INTO user_status (user_id, status_date, status, note) VALUES (?,?,?,?)', user_id, today, statusKey, statusNote);
+  }
+}
+
 // 등록
 router.post('/', async (req, res) => {
   try {
-    const { trip_date, destination, organization, purpose, depart_time, return_time, note } = req.body;
+    const { trip_date, trip_type, destination, organization, purpose, depart_time, return_time, note } = req.body;
     const user_id = req.session.userId;
     if (!trip_date || !destination) return res.status(400).json({ error: '날짜와 목적지는 필수입니다.' });
     const result = await db.run(
-      'INSERT INTO field_trips (user_id, trip_date, destination, organization, purpose, depart_time, return_time, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      user_id, trip_date, destination, organization||'', purpose||'', depart_time||'', return_time||'', note||'');
+      'INSERT INTO field_trips (user_id, trip_date, trip_type, destination, organization, purpose, depart_time, return_time, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      user_id, trip_date, trip_type||'outside', destination, organization||'', purpose||'', depart_time||'', return_time||'', note||'');
     const userName = req.session.userName || '';
-    await req.logAndNotify({ type: 'fieldtrip', action: 'create', title: `${userName}님 외근: ${destination}`, message: `${trip_date} ${purpose||''}`, actor_id: user_id, actor_name: userName, target_page: 'fieldtrips', target_id: result.lastInsertRowid });
+    await syncStatusForTrip(user_id, trip_date, trip_type||'outside', destination, organization||'', return_time||'');
+    const typeLabel = { outside:'외근', business_trip:'출장', off:'휴가' }[trip_type||'outside'] || '외근';
+    await req.logAndNotify({ type: 'fieldtrip', action: 'create', title: `${userName}님 ${typeLabel}: ${destination}`, message: `${trip_date} ${purpose||''}`, actor_id: user_id, actor_name: userName, target_page: 'fieldtrips', target_id: result.lastInsertRowid });
     res.json({ id: result.lastInsertRowid });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -55,10 +74,11 @@ router.put('/:id', async (req, res) => {
     if (!row) return res.status(404).json({ error: '없음' });
     if (row.user_id !== req.session.userId && !req.session.isAdmin)
       return res.status(403).json({ error: '본인 기록만 수정할 수 있습니다.' });
-    const { trip_date, destination, organization, purpose, depart_time, return_time, note } = req.body;
+    const { trip_date, trip_type, destination, organization, purpose, depart_time, return_time, note } = req.body;
     await db.run(
-      'UPDATE field_trips SET trip_date=?, destination=?, organization=?, purpose=?, depart_time=?, return_time=?, note=? WHERE id=?',
-      trip_date, destination, organization||'', purpose||'', depart_time||'', return_time||'', note||'', req.params.id);
+      'UPDATE field_trips SET trip_date=?, trip_type=?, destination=?, organization=?, purpose=?, depart_time=?, return_time=?, note=? WHERE id=?',
+      trip_date, trip_type||'outside', destination, organization||'', purpose||'', depart_time||'', return_time||'', note||'', req.params.id);
+    await syncStatusForTrip(row.user_id, trip_date, trip_type||'outside', destination, organization||'', return_time||'');
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
