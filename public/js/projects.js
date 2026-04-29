@@ -31,7 +31,11 @@ function filterProjects(tab, btn) {
 }
 
 async function loadProjects() {
-  const allProjects = await api.projects.list().catch(() => []);
+  const [allProjects, favs] = await Promise.all([
+    api.projects.list().catch(() => []),
+    api.favorites.list('project').catch(() => []),
+  ]);
+  const favSet = new Set(favs.map(f => f.target_id));
   const projects = _projTab === 'all' ? allProjects
     : allProjects.filter(p => (p.project_type||'regular') === _projTab);
   const grid = document.getElementById('projects-grid');
@@ -43,6 +47,7 @@ async function loadProjects() {
     const progress = p.auto_progress || p.progress || 0;
     const statusLabel = { active: '진행중', completed: '완료', paused: '보류' };
     const isNational = (p.project_type||'regular') === 'national';
+    const isFav = favSet.has(p.id);
     return `
       <div class="card project-card ${isNational ? 'national-project' : ''}" onclick="viewProject(${p.id})">
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
@@ -50,7 +55,10 @@ async function loadProjects() {
             ${isNational ? '<span class="national-badge">🏛 국가과제</span>' : ''}
             ${escHtml(p.name)}
           </div>
-          <span class="badge badge-${p.status === 'active' ? 'active' : p.status === 'completed' ? 'completed' : 'pending'}">${statusLabel[p.status]||'진행중'}</span>
+          <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+            <button class="fav-star ${isFav?'fav-on':''}" onclick="toggleFavorite('project',${p.id},this)" title="${isFav?'즐겨찾기 해제':'즐겨찾기'}" aria-label="즐겨찾기 토글" aria-pressed="${isFav}">${isFav?'★':'☆'}</button>
+            <span class="badge badge-${p.status === 'active' ? 'active' : p.status === 'completed' ? 'completed' : 'pending'}">${statusLabel[p.status]||'진행중'}</span>
+          </div>
         </div>
         ${isNational && p.org_name ? `<div style="font-size:12px;color:var(--blue);margin-bottom:4px">🏢 ${escHtml(p.org_name)}</div>` : ''}
         ${isNational && p.grant_number ? `<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">과제번호: ${escHtml(p.grant_number)}</div>` : ''}

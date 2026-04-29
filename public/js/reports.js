@@ -5,6 +5,12 @@ async function renderReports() {
   const today = new Date().toISOString().split('T')[0];
   const users = await api.users.list().catch(() => []);
 
+  // 이전 필터 복원
+  const saved = filterStore.get('reports');
+  const startVal = saved['report-filter-start'] || getWeekStart();
+  const endVal = saved['report-filter-end'] || today;
+  const userVal = saved['report-filter-user'] || '';
+
   page.innerHTML = `
     <div class="page-header">
       <div>
@@ -18,13 +24,13 @@ async function renderReports() {
     </div>
     <div class="card">
       <div class="filter-bar">
-        <select id="report-filter-user">
+        <select id="report-filter-user" aria-label="직원 필터">
           <option value="">전체 직원</option>
-          ${users.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
+          ${users.map(u => `<option value="${u.id}" ${String(u.id) === String(userVal) ? 'selected' : ''}>${u.name}</option>`).join('')}
         </select>
-        <input type="date" id="report-filter-start" value="${getWeekStart()}">
+        <input type="date" id="report-filter-start" value="${startVal}" aria-label="시작 날짜">
         <span style="font-size:13px;color:var(--text-tertiary)">~</span>
-        <input type="date" id="report-filter-end" value="${today}">
+        <input type="date" id="report-filter-end" value="${endVal}" aria-label="종료 날짜">
         <button class="btn btn-secondary" onclick="loadReports()">조회</button>
         <button class="btn btn-ghost" onclick="setDateRange('week')">이번주</button>
         <button class="btn btn-ghost" onclick="setDateRange('month')">이번달</button>
@@ -32,6 +38,7 @@ async function renderReports() {
       <div id="reports-list"></div>
     </div>
   `;
+  filterStore.bindInputs('reports', ['report-filter-user', 'report-filter-start', 'report-filter-end'], loadReports);
   loadReports();
 }
 
@@ -53,6 +60,9 @@ function setDateRange(type) {
     document.getElementById('report-filter-start').value = start.toISOString().split('T')[0];
     document.getElementById('report-filter-end').value = today.toISOString().split('T')[0];
   }
+  // 필터 값 저장
+  filterStore.set('reports', 'report-filter-start', document.getElementById('report-filter-start').value);
+  filterStore.set('reports', 'report-filter-end', document.getElementById('report-filter-end').value);
   loadReports();
 }
 
@@ -139,10 +149,15 @@ async function openReportForm(reportId) {
         <option value="done"        ${report?.work_status === 'done'        ? 'selected' : ''}>🟢 완료</option>
         <option value="blocked"     ${report?.work_status === 'blocked'     ? 'selected' : ''}>🔴 지연/보류</option>
       </select>
-    </div>`,
-    `<button class="btn btn-secondary" onclick="modal.hide()">취소</button>
+    </div>
+    ${report?.id ? `<div id="r-attach-${report.id}"></div>` : '<div class="form-hint">💡 보고서를 먼저 저장하면 첨부파일을 추가할 수 있습니다.</div>'}`,
+    `<button class="btn btn-secondary" onclick="modal._tryClose()">취소</button>
      <button class="btn btn-coral" onclick="saveReport()">저장</button>`
   );
+  // 기존 보고서면 첨부파일 위젯 렌더링
+  if (report?.id) {
+    setTimeout(() => renderAttachments(`r-attach-${report.id}`, 'report', report.id), 50);
+  }
 }
 
 async function saveReport() {
@@ -170,12 +185,49 @@ async function viewReport(id) {
   if (!r) return;
   modal.show(
     `업무보고 · ${r.name} · ${r.report_date}`,
-    `<div class="meeting-section"><h4>금일 작업 내용</h4><p>${r.work_done || '-'}</p></div>
-     <div class="meeting-section"><h4>내일 예정 작업</h4><p>${r.work_planned || '-'}</p></div>
-     ${r.special_notes ? `<div class="meeting-section"><h4>특이사항</h4><p>${r.special_notes}</p></div>` : ''}`,
-    `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
+    `<div class="meeting-section"><h4>금일 작업 내용</h4><p>${escHtmlReport(r.work_done) || '-'}</p></div>
+     <div class="meeting-section"><h4>내일 예정 작업</h4><p>${escHtmlReport(r.work_planned) || '-'}</p></div>
+     ${r.special_notes ? `<div class="meeting-section"><h4>특이사항</h4><p>${escHtmlReport(r.special_notes)}</p></div>` : ''}
+     <div id="report-attach-${id}" style="margin-top:16px"></div>`,
+    `<button class="btn btn-ghost btn-sm" onclick="printReport(${id})" aria-label="인쇄">🖨 인쇄</button>
+     <div style="flex:1"></div>
+     <button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
      <button class="btn btn-coral" onclick="modal.hide();editReport(${id})">수정</button>`
   );
+  setTimeout(() => renderAttachments(`report-attach-${id}`, 'report', id), 50);
+}
+
+function escHtmlReport(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// 단일 보고서 인쇄 (브라우저 인쇄 다이얼로그)
+function printReport(id) {
+  api.reports.list({}).then(reports => {
+    const r = reports.find(x => x.id == id);
+    if (!r) return;
+    const w = window.open('', '_blank', 'width=820,height=900');
+    if (!w) { toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.', 'error'); return; }
+    w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>업무보고 ${r.report_date} ${r.name}</title>
+      <style>
+        body{font-family:'Pretendard','Inter',-apple-system,sans-serif;color:#1E1F21;padding:32px;line-height:1.6;font-size:13px}
+        h1{font-size:22px;margin-bottom:4px;letter-spacing:-0.4px}
+        .meta{color:#6F7782;font-size:12px;margin-bottom:24px;border-bottom:1px solid #E8ECEE;padding-bottom:14px}
+        h2{font-size:14px;font-weight:700;color:#C85C4F;margin-top:18px;margin-bottom:6px;letter-spacing:-0.2px}
+        p{white-space:pre-wrap;margin-bottom:14px}
+        .footer{margin-top:32px;font-size:11px;color:#9CA6AF;text-align:right}
+        @media print { body{padding:18mm} .no-print{display:none} }
+      </style></head><body>
+      <h1>업무보고서</h1>
+      <div class="meta">${r.name} · ${r.report_date} · 진행상태 ${r.work_status||'in_progress'}</div>
+      <h2>금일 작업 내용</h2><p>${(r.work_done||'-').replace(/</g,'&lt;')}</p>
+      <h2>내일 예정 작업</h2><p>${(r.work_planned||'-').replace(/</g,'&lt;')}</p>
+      ${r.special_notes ? `<h2>특이사항</h2><p>${r.special_notes.replace(/</g,'&lt;')}</p>` : ''}
+      <div class="footer">KMCP 연구소 · 출력일 ${new Date().toLocaleString('ko-KR')}</div>
+      <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>`);
+    w.document.close();
+  });
 }
 
 async function editReport(id) { openReportForm(id); }

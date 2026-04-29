@@ -5,29 +5,36 @@ const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
-// 댓글 목록 조회
+// 댓글 목록 조회 — 익명 댓글은 user_name/user_id 마스킹 (본인은 식별 가능)
 router.get('/', async (req, res) => {
   try {
     const { type, id } = req.query;
+    const sessionUserId = req.session.userId;
     if (!type || !id) return res.status(400).json({ error: 'type과 id가 필요합니다' });
     const rows = await db.all(
       'SELECT * FROM comments WHERE target_type=? AND target_id=? ORDER BY created_at ASC',
       type, id
     );
-    res.json(rows);
+    const masked = rows.map(r => {
+      if (!r.is_anonymous) return r;
+      const isMine = r.user_id === sessionUserId;
+      return { ...r, user_name: '익명', user_id: isMine ? r.user_id : null };
+    });
+    res.json(masked);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// 댓글 작성
+// 댓글 작성 — is_anonymous 플래그 지원 (건의/공지에서 사용)
 router.post('/', async (req, res) => {
   try {
-    const { target_type, target_id, content } = req.body;
+    const { target_type, target_id, content, is_anonymous } = req.body;
     const userId = req.session.userId || req.session.user?.id;
     const userName = req.session.user?.name || (await db.get('SELECT name FROM users WHERE id=?', userId))?.name || '';
     if (!target_type || !target_id || !content?.trim()) return res.status(400).json({ error: '필수 항목 누락' });
+    const anon = is_anonymous ? 1 : 0;
     const result = await db.run(
-      'INSERT INTO comments (target_type, target_id, user_id, user_name, content) VALUES (?,?,?,?,?)',
-      target_type, target_id, userId, userName, content.trim()
+      'INSERT INTO comments (target_type, target_id, user_id, user_name, content, is_anonymous) VALUES (?,?,?,?,?,?)',
+      target_type, target_id, userId, anon ? '익명' : userName, content.trim(), anon
     );
     res.json({ id: result.lastInsertRowid });
   } catch(e) { res.status(500).json({ error: e.message }); }

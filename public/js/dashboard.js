@@ -247,6 +247,9 @@ async function renderDashboard() {
     </div>
     ` : ''}
 
+    <!-- 즐겨찾기 -->
+    <div id="favorites-widget" style="margin-top:16px"></div>
+
     <!-- 외근·출장 + 마일스톤 -->
     <div id="fieldtrip-milestone-row"></div>
 
@@ -281,6 +284,11 @@ async function renderDashboard() {
   loadTodoWidget();
   loadTodayFieldTrips();
   loadUpcomingMilestones();
+  loadFavoritesWidget();
+  // 신규 사용자 onboarding
+  if (typeof maybeShowOnboarding === 'function') {
+    maybeShowOnboarding({ tasks, meetings, myReports, notices });
+  }
 }
 
 function renderMyTaskItem(t) {

@@ -194,7 +194,45 @@ function initApp(user) {
   loadNotifications();
   window._notifIntervalId = setInterval(loadNotifications, 3 * 60 * 1000); // 3분마다 갱신
 
+  // 접근성: 사이드바/장식용 SVG 아이콘에 aria-hidden, role 보강
+  applyAccessibilityEnhancements();
+
   navigateTo('dashboard');
+}
+
+function applyAccessibilityEnhancements() {
+  // 모든 nav-icon SVG는 시각 보조 (옆에 nav-text가 있음)
+  document.querySelectorAll('.nav-icon').forEach(svg => {
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+  });
+  // 사이드바 nav 항목에 aria-label (visible text 자동 사용 — 보조용)
+  document.querySelectorAll('.nav-item').forEach(a => {
+    const txt = a.querySelector('.nav-text')?.textContent?.trim();
+    if (txt && !a.getAttribute('aria-label')) a.setAttribute('aria-label', txt);
+  });
+  // topbar 아이콘 버튼에 aria-label
+  const topbarBell = document.getElementById('notif-bell');
+  if (topbarBell && !topbarBell.getAttribute('aria-label')) topbarBell.setAttribute('aria-label', '알림 열기');
+  const sbToggle = document.getElementById('sidebar-toggle');
+  if (sbToggle && !sbToggle.getAttribute('aria-label')) sbToggle.setAttribute('aria-label', '사이드바 토글');
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn && !logoutBtn.getAttribute('aria-label')) logoutBtn.setAttribute('aria-label', '로그아웃');
+  const chatFab = document.getElementById('chat-fab');
+  if (chatFab && !chatFab.getAttribute('aria-label')) chatFab.setAttribute('aria-label', '팀 채팅 열기');
+  // 모달 컨테이너 a11y
+  const modalEl = document.getElementById('modal');
+  if (modalEl) {
+    modalEl.setAttribute('role', 'dialog');
+    modalEl.setAttribute('aria-modal', 'true');
+    modalEl.setAttribute('aria-labelledby', 'modal-title');
+  }
+  // 글로벌 검색 입력 a11y
+  const search = document.getElementById('global-search');
+  if (search && !search.getAttribute('aria-label')) search.setAttribute('aria-label', '전체 검색');
+  // 메인 컨텐츠 영역 a11y
+  const main = document.getElementById('main-content');
+  if (main) main.setAttribute('role', 'main');
 }
 
 // ===== 알림 시스템 =====
@@ -389,7 +427,7 @@ document.addEventListener('click', (e) => {
 function renderSearchResults(results, query) {
   const dd = document.getElementById('search-dropdown');
   const container = document.getElementById('search-results');
-  const total = (results.tasks?.length||0) + (results.reports?.length||0) + (results.meetings?.length||0) + (results.projects?.length||0) + (results.notices?.length||0);
+  const total = (results.tasks?.length||0) + (results.reports?.length||0) + (results.meetings?.length||0) + (results.projects?.length||0) + (results.notices?.length||0) + (results.suggestions?.length||0) + (results.comments?.length||0);
 
   if (total === 0) {
     container.innerHTML = '<div class="search-empty">검색 결과가 없습니다</div>';
@@ -452,6 +490,33 @@ function renderSearchResults(results, query) {
         <div><div class="search-item-title">${highlight(n.title)}</div></div>
       </div>
     `).join('');
+  }
+  if (results.suggestions?.length) {
+    html += `<div class="search-section-title">건의사항 (${results.suggestions.length})</div>`;
+    html += results.suggestions.map(s => {
+      const author = s.is_anonymous ? '익명' : (s.author_name || '');
+      return `
+        <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('suggestions')">
+          <span class="search-item-icon">💡</span>
+          <div><div class="search-item-title">${highlight(s.title)}</div>
+          <div class="search-item-meta">${author}${s.content ? ' · '+highlight((s.content||'').slice(0,60)) : ''}</div></div>
+        </div>`;
+    }).join('');
+  }
+  if (results.comments?.length) {
+    html += `<div class="search-section-title">댓글 (${results.comments.length})</div>`;
+    const targetPageMap = { meeting: 'meetings', task: 'kanban', suggestion: 'suggestions' };
+    html += results.comments.map(c => {
+      const page = targetPageMap[c.target_type] || 'dashboard';
+      const author = c.is_anonymous ? '익명' : (c.user_name || '');
+      const typeLabel = c.target_type === 'meeting' ? '회의' : c.target_type === 'task' ? '작업' : '건의';
+      return `
+        <div class="search-item" onclick="document.getElementById('search-dropdown').style.display='none';navigateTo('${page}')">
+          <span class="search-item-icon">💬</span>
+          <div><div class="search-item-title">${highlight((c.content||'').slice(0,80))}</div>
+          <div class="search-item-meta">${typeLabel} · ${author}</div></div>
+        </div>`;
+    }).join('');
   }
 
   container.innerHTML = html;

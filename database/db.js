@@ -316,6 +316,41 @@ async function initDB() {
   try { await db.exec("ALTER TABLE projects ADD COLUMN org_name TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
   try { await db.exec("ALTER TABLE projects ADD COLUMN total_budget TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
   try { await db.exec("ALTER TABLE projects ADD COLUMN grant_number TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
+  // 마이그레이션: 댓글 익명 플래그
+  try { await db.exec("ALTER TABLE comments ADD COLUMN is_anonymous INTEGER DEFAULT 0"); } catch(e) { /* 이미 존재 */ }
+
+  // 첨부파일 테이블 (보고서/회의/공지 등 공통)
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_type TEXT NOT NULL,
+        target_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        size INTEGER DEFAULT 0,
+        mimetype TEXT DEFAULT '',
+        uploader_id INTEGER,
+        uploader_name TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_attach_target ON attachments(target_type, target_id);
+    `);
+  } catch (e) { console.error('attachments 테이블:', e.message); }
+
+  // 즐겨찾기 테이블 (사용자별 핀)
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS favorites (
+        user_id INTEGER NOT NULL,
+        target_type TEXT NOT NULL,
+        target_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, target_type, target_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+  } catch (e) { console.error('favorites 테이블:', e.message); }
   // 기존 사용자 전부 승인 처리
   await db.run('UPDATE users SET is_approved = 1 WHERE is_approved = 0 OR is_approved IS NULL');
 

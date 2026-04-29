@@ -40,16 +40,19 @@ async function renderComments(containerId, targetType, targetId) {
 
   const commentsList = comments.length
     ? comments.map(c => {
-        const isMine = c.user_id === userId;
+        // 익명 댓글: server에서 user_id가 본인일 때만 채워서 보냄
+        const isMine = c.is_anonymous ? (c.user_id === userId) : (c.user_id === userId);
+        const displayName = c.is_anonymous ? '익명' : c.user_name;
+        const avatarLabel = c.is_anonymous ? '?' : (c.user_name || '?').slice(0,1);
         return `
-          <div class="comment-item" id="comment-${c.id}">
-            <div class="comment-avatar ${getAvatarColorClass(c.user_name)}">${c.user_name.slice(0,1)}</div>
+          <div class="comment-item ${c.is_anonymous ? 'comment-anonymous' : ''}" id="comment-${c.id}">
+            <div class="comment-avatar ${getAvatarColorClass(displayName)}" aria-label="${escapeHtml(displayName)} 아바타">${avatarLabel}</div>
             <div class="comment-body">
               <div class="comment-header">
-                <span class="comment-author">${c.user_name}</span>
+                <span class="comment-author">${escapeHtml(displayName)}${c.is_anonymous ? ' <span class="comment-anon-tag">익명</span>' : ''}</span>
                 <span class="comment-time">${getTimeAgoShort(c.created_at)}</span>
                 ${isMine || isAdmin
-                  ? `<button class="comment-delete-btn" onclick="deleteComment(${c.id},'${containerId}','${targetType}',${targetId})" title="삭제">×</button>`
+                  ? `<button class="comment-delete-btn" onclick="deleteComment(${c.id},'${containerId}','${targetType}',${targetId})" title="삭제" aria-label="댓글 삭제">×</button>`
                   : ''}
               </div>
               <div class="comment-text">${escapeHtml(c.content)}</div>
@@ -58,17 +61,24 @@ async function renderComments(containerId, targetType, targetId) {
       }).join('')
     : `<div class="comments-empty">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</div>`;
 
+  // 건의사항(suggestion)에서만 익명 댓글 토글 표시
+  const showAnonToggle = targetType === 'suggestion';
+
   container.innerHTML = `
     <div class="comments-section">
       <h4 class="comments-title">💬 댓글 <span class="comments-count">${comments.length}</span></h4>
       <div class="comments-list" id="${containerId}-list">${commentsList}</div>
       <div class="comment-input-row">
-        <div class="comment-avatar ${getAvatarColorClass(window._currentUser?.name||'')} comment-avatar-sm">${(window._currentUser?.name||'?').slice(0,1)}</div>
+        <div class="comment-avatar ${getAvatarColorClass(window._currentUser?.name||'')} comment-avatar-sm" aria-hidden="true">${(window._currentUser?.name||'?').slice(0,1)}</div>
         <input type="text" class="comment-input" id="${containerId}-input"
-          placeholder="댓글을 입력하세요..."
+          placeholder="댓글을 입력하세요..." aria-label="댓글 입력"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment('${containerId}','${targetType}',${targetId})}">
         <button class="btn btn-coral btn-sm" onclick="submitComment('${containerId}','${targetType}',${targetId})">등록</button>
       </div>
+      ${showAnonToggle ? `
+        <label class="comment-anon-toggle">
+          <input type="checkbox" id="${containerId}-anon"> <span>익명으로 작성</span>
+        </label>` : ''}
     </div>`;
 }
 
@@ -78,10 +88,12 @@ function escapeHtml(str) {
 
 async function submitComment(containerId, targetType, targetId) {
   const input = document.getElementById(`${containerId}-input`);
+  const anonCheckbox = document.getElementById(`${containerId}-anon`);
+  const isAnon = !!(anonCheckbox && anonCheckbox.checked);
   const content = input?.value?.trim();
   if (!content) return;
   try {
-    await api.comments.create({ target_type: targetType, target_id: targetId, content });
+    await api.comments.create({ target_type: targetType, target_id: targetId, content, is_anonymous: isAnon });
     input.value = '';
     await renderComments(containerId, targetType, targetId);
     // 새 댓글로 스크롤

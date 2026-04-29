@@ -5,9 +5,10 @@ const { requireLogin, requireAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
-// 목록
+// 목록 — 익명 글의 작성자 정보는 응답 단계에서 마스킹 (관리자도 동일)
 router.get('/', async (req, res) => {
   try {
+    const sessionUserId = req.session.userId;
     const rows = await db.all(`
       SELECT s.*, u.name as author_name, u.department,
         (SELECT COUNT(*) FROM suggestion_likes WHERE suggestion_id=s.id) as like_count
@@ -15,7 +16,19 @@ router.get('/', async (req, res) => {
       LEFT JOIN users u ON s.author_id = u.id
       ORDER BY s.created_at DESC
     `);
-    res.json(rows);
+    // 익명 건의는 작성자 본인에게만 author_id를 노출 (자기 글 삭제용 식별)
+    // 그 외엔 모두 마스킹.
+    const masked = rows.map(r => {
+      if (!r.is_anonymous) return r;
+      const isMine = r.author_id === sessionUserId;
+      return {
+        ...r,
+        author_name: null,
+        department: null,
+        author_id: isMine ? r.author_id : null,
+      };
+    });
+    res.json(masked);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -349,11 +349,15 @@ async function viewMeeting(id) {
         </div>
       ` : ''}
 
+      <div id="meeting-attach-${id}" class="meeting-section"></div>
       <div id="meeting-comments-${id}" class="meeting-section"></div>
     </div>`,
-    `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
+    `<button class="btn btn-ghost btn-sm" onclick="printMeeting(${id})" aria-label="회의록 인쇄">🖨 인쇄</button>
+     <div style="flex:1"></div>
+     <button class="btn btn-secondary" onclick="modal.hide()">닫기</button>
      <button class="btn btn-coral" onclick="modal.hide();openMeetingForm(${id})">수정</button>`
   );
+  setTimeout(() => renderAttachments(`meeting-attach-${id}`, 'meeting', id), 50);
 
   const origHide = modal._origHide || modal.hide;
   if (!modal._origHide) modal._origHide = modal.hide;
@@ -454,4 +458,44 @@ async function deleteMeeting(id) {
   await api.meetings.delete(id);
   toast('삭제되었습니다');
   loadMeetings();
+}
+
+// 단일 회의록 인쇄
+async function printMeeting(id) {
+  const m = await api.meetings.get(id).catch(() => null);
+  if (!m) return;
+  const w = window.open('', '_blank', 'width=820,height=900');
+  if (!w) { toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.', 'error'); return; }
+  const esc = (s) => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let actions = '';
+  try {
+    const items = JSON.parse(m.action_items||'[]');
+    if (Array.isArray(items) && items.length) {
+      actions = `<h2>액션 아이템</h2><ol>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ol>`;
+    }
+  } catch {}
+  w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>회의록 ${m.meeting_date} ${m.title||''}</title>
+    <style>
+      body{font-family:'Pretendard','Inter',-apple-system,sans-serif;color:#1E1F21;padding:32px;line-height:1.6;font-size:13px}
+      h1{font-size:22px;margin-bottom:4px;letter-spacing:-0.4px}
+      .meta{color:#6F7782;font-size:12px;margin-bottom:24px;border-bottom:1px solid #E8ECEE;padding-bottom:14px}
+      h2{font-size:14px;font-weight:700;color:#C85C4F;margin-top:18px;margin-bottom:6px;letter-spacing:-0.2px}
+      p,ol,ul{white-space:pre-wrap;margin-bottom:14px;padding-left:0}
+      ol,ul{padding-left:18px}
+      .attendees{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+      .chip{padding:2px 10px;border:1px solid #E8ECEE;border-radius:12px;font-size:11px}
+      .footer{margin-top:32px;font-size:11px;color:#9CA6AF;text-align:right}
+      @media print { body{padding:18mm} }
+    </style></head><body>
+    <h1>${m.type === 'weekly' ? '주간회의' : '기술회의'} ${m.title ? '· '+esc(m.title) : ''}</h1>
+    <div class="meta">${m.meeting_date} ${m.start_time||''} ${m.end_time?'~ '+m.end_time:''} · 작성: ${esc(m.creator_name||'-')}</div>
+    ${m.agenda ? `<h2>안건</h2><p>${esc(m.agenda)}</p>` : ''}
+    ${m.minutes ? `<h2>회의록</h2><p>${esc(m.minutes)}</p>` : ''}
+    ${m.decisions ? `<h2>결정사항</h2><p>${esc(m.decisions)}</p>` : ''}
+    ${actions}
+    ${m.attendees?.length ? `<h2>참석자 (${m.attendees.length}명)</h2><div class="attendees">${m.attendees.map(a => `<span class="chip">${a.confirmed?'✔ ':''}${esc(a.name)}</span>`).join('')}</div>` : ''}
+    <div class="footer">KMCP 연구소 · 출력일 ${new Date().toLocaleString('ko-KR')}</div>
+    <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`);
+  w.document.close();
 }

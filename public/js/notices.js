@@ -84,9 +84,11 @@ async function viewNotice(id) {
     `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;display:flex;align-items:center;gap:8px">
        ${n.author_name||''} · ${n.created_at?.split('T')[0]||''} ${n.is_pinned ? '<span class="badge badge-admin">고정</span>' : ''}
      </div>
-     <div style="font-size:14px;line-height:1.8;white-space:pre-wrap;color:var(--text)">${n.content || '(내용 없음)'}</div>`,
+     <div style="font-size:14px;line-height:1.8;white-space:pre-wrap;color:var(--text)">${n.content || '(내용 없음)'}</div>
+     <div id="notice-attach-${id}" style="margin-top:16px"></div>`,
     `<button class="btn btn-secondary" onclick="modal.hide()">닫기</button>`
   );
+  setTimeout(() => renderAttachments(`notice-attach-${id}`, 'notice', id), 50);
 }
 
 async function deleteNotice(id) {

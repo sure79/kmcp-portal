@@ -153,4 +153,13 @@ const api = {
     delete: (id) => api.delete(`/api/todos/${id}`),
   },
   search: (q) => api.get(`/api/search?q=${encodeURIComponent(q)}`),
+  attachments: {
+    list: (type, id) => api.get(`/api/attachments?type=${type}&id=${id}`),
+    delete: (id) => api.delete(`/api/attachments/${id}`),
+    // upload uses raw FormData via fetch in attachments.js
+  },
+  favorites: {
+    list: (type) => api.get(`/api/favorites${type ? '?type='+type : ''}`),
+    toggle: (target_type, target_id) => api.post('/api/favorites/toggle', { target_type, target_id }),
+  },
 };

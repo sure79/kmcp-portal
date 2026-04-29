@@ -10,6 +10,12 @@ async function renderFieldTrips() {
   const monthStart = today.slice(0, 8) + '01';
   const users = await api.users.list().catch(() => []);
 
+  // 이전 필터 복원 (없으면 본인 + 이번달 기본)
+  const saved = filterStore.get('fieldtrips');
+  const startVal = saved['ft-filter-start'] || monthStart;
+  const endVal = saved['ft-filter-end'] || today;
+  const userVal = saved['ft-filter-user'] !== undefined ? saved['ft-filter-user'] : (window._currentUser?.id ?? '');
+
   page.innerHTML = `
     <div class="page-header">
       <div>
@@ -23,19 +29,20 @@ async function renderFieldTrips() {
     </div>
     <div class="card">
       <div class="filter-bar">
-        <select id="ft-filter-user">
+        <select id="ft-filter-user" aria-label="직원 필터">
           <option value="">전체 직원</option>
-          ${users.map(u => `<option value="${u.id}" ${window._currentUser?.id == u.id ? 'selected' : ''}>${escHtml(u.name)}</option>`).join('')}
+          ${users.map(u => `<option value="${u.id}" ${String(u.id) === String(userVal) ? 'selected' : ''}>${escHtml(u.name)}</option>`).join('')}
         </select>
-        <input type="date" id="ft-filter-start" value="${monthStart}">
+        <input type="date" id="ft-filter-start" value="${startVal}" aria-label="시작 날짜">
         <span style="font-size:13px;color:var(--text-tertiary)">~</span>
-        <input type="date" id="ft-filter-end" value="${today}">
+        <input type="date" id="ft-filter-end" value="${endVal}" aria-label="종료 날짜">
         <button class="btn btn-secondary" onclick="loadFieldTrips()">조회</button>
         <button class="btn btn-ghost" onclick="setFTDateRange('month')">이번달</button>
       </div>
       <div id="fieldtrips-list"></div>
     </div>
   `;
+  filterStore.bindInputs('fieldtrips', ['ft-filter-user', 'ft-filter-start', 'ft-filter-end'], loadFieldTrips);
   loadFieldTrips();
 }
 
@@ -46,6 +53,8 @@ function setFTDateRange(type) {
     document.getElementById('ft-filter-start').value = start.toISOString().split('T')[0];
     document.getElementById('ft-filter-end').value = today.toISOString().split('T')[0];
   }
+  filterStore.set('fieldtrips', 'ft-filter-start', document.getElementById('ft-filter-start').value);
+  filterStore.set('fieldtrips', 'ft-filter-end', document.getElementById('ft-filter-end').value);
   loadFieldTrips();
 }
 

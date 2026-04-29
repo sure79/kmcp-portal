@@ -138,8 +138,12 @@ async function openUserForm(userId) {
        <div class="form-group"><label>아이디 *</label><input type="text" id="u-username" value="${user?.username||''}" ${userId?'readonly style="background:var(--bg)"':''} placeholder="로그인 아이디"></div>
      </div>
      <div class="form-row">
-       <div class="form-group"><label>부서</label><input type="text" id="u-dept" value="${user?.department||''}" placeholder="예: 전기팀"></div>
-       <div class="form-group"><label>직급</label><input type="text" id="u-position" value="${user?.position||''}" placeholder="예: 담당자"></div>
+       <div class="form-group"><label>부서</label>
+         <input type="text" id="u-dept" list="dept-options" value="${user?.department||''}" placeholder="예: 전기팀" autocomplete="off">
+       </div>
+       <div class="form-group"><label>직급</label>
+         <input type="text" id="u-position" list="position-options" value="${user?.position||''}" placeholder="예: 담당자" autocomplete="off">
+       </div>
      </div>
      <div class="form-row">
        <div class="form-group"><label>${userId ? '새 비밀번호 (변경시만)' : '비밀번호 *'}</label>

@@ -96,6 +96,8 @@ app.use('/api/weather', require('./routes/weather'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/todos', require('./routes/todos'));
 app.use('/api/fieldtrips', require('./routes/fieldtrips'));
+app.use('/api/attachments', require('./routes/attachments'));
+app.use('/api/favorites', require('./routes/favorites'));
 
 // ===== 글로벌 검색 =====
 app.get('/api/search', (req, res, next) => {
@@ -104,9 +106,10 @@ app.get('/api/search', (req, res, next) => {
 }, async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
-    if (!q || q.length < 2) return res.json({ tasks: [], reports: [], meetings: [], projects: [], notices: [] });
+    if (!q || q.length < 2) return res.json({ tasks: [], reports: [], meetings: [], projects: [], notices: [], suggestions: [], comments: [] });
     const like = `%${q}%`;
-    const [tasks, reports, meetings, projects, notices] = await Promise.all([
+    const sessionUserId = req.session.userId;
+    const [tasks, reports, meetings, projects, notices, suggestionsRaw, commentsRaw] = await Promise.all([
       db.all(`SELECT t.id, t.title, t.description, t.status, u.name as assignee_name, p.name as project_name
               FROM tasks t LEFT JOIN users u ON t.assignee_id=u.id LEFT JOIN projects p ON t.project_id=p.id
               WHERE t.title LIKE ? OR t.description LIKE ? LIMIT 10`, like, like),
@@ -119,8 +122,25 @@ app.get('/api/search', (req, res, next) => {
               WHERE name LIKE ? OR description LIKE ? LIMIT 10`, like, like),
       db.all(`SELECT id, title, content FROM notices
               WHERE title LIKE ? OR content LIKE ? LIMIT 10`, like, like),
+      db.all(`SELECT s.id, s.title, s.content, s.category, s.is_anonymous, s.author_id, u.name as author_name
+              FROM suggestions s LEFT JOIN users u ON s.author_id = u.id
+              WHERE s.title LIKE ? OR s.content LIKE ? LIMIT 10`, like, like),
+      db.all(`SELECT c.id, c.target_type, c.target_id, c.content, c.user_name, c.user_id, c.is_anonymous, c.created_at
+              FROM comments c
+              WHERE c.content LIKE ? LIMIT 10`, like),
     ]);
-    res.json({ tasks, reports, meetings, projects, notices });
+    // 익명 마스킹 (목록 라우터와 동일 정책)
+    const suggestions = suggestionsRaw.map(s => {
+      if (!s.is_anonymous) return s;
+      const isMine = s.author_id === sessionUserId;
+      return { ...s, author_name: null, author_id: isMine ? s.author_id : null };
+    });
+    const comments = commentsRaw.map(c => {
+      if (!c.is_anonymous) return c;
+      const isMine = c.user_id === sessionUserId;
+      return { ...c, user_name: '익명', user_id: isMine ? c.user_id : null };
+    });
+    res.json({ tasks, reports, meetings, projects, notices, suggestions, comments });
   } catch (e) {
     res.status(500).json({ error: isProd ? '검색 중 오류가 발생했습니다.' : e.message });
   }
