@@ -18,7 +18,9 @@
     "helmet": "^8.0.0",
     "express-rate-limit": "^7.4.0",
     "@google/generative-ai": "^0.21.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "@aws-sdk/client-s3": "^3.659.0",
+    "@aws-sdk/s3-request-presigner": "^3.659.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
