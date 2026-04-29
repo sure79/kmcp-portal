@@ -2800,6 +2800,44 @@ input[type="radio"]:not(.no-style):checked {
 }
 .chat-text + .chat-image-wrap { margin-top: 6px; }
 
+/* 채팅 메시지 삭제 버튼 (호버 시 표시) */
+.chat-bubble { position: relative; }
+.chat-del-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity .15s ease, transform .15s ease, background .15s ease, color .15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.chat-msg:hover .chat-del-btn,
+.chat-del-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+.chat-del-btn:hover {
+  background: var(--red);
+  color: #fff;
+}
+/* 모바일/터치 기기는 항상 표시 (호버 없음) */
+@media (hover: none) {
+  .chat-del-btn { opacity: 0.6; transform: scale(1); }
+}
+
 /* 채팅 버블 안 파일 카드 */
 .chat-file {
   display: flex;

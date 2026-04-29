@@ -1,9 +1,46 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const db = require('../database/db');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
+
+// R2 클라이언트 (첨부 정리에 사용) — attachments.js와 동일 환경변수 공유
+const R2_ENABLED = !!(process.env.R2_ACCESS_KEY_ID
+  && process.env.R2_SECRET_ACCESS_KEY
+  && process.env.R2_ENDPOINT
+  && process.env.R2_BUCKET);
+let _s3 = null, _DeleteObjectCommand = null;
+if (R2_ENABLED) {
+  const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+  _DeleteObjectCommand = DeleteObjectCommand;
+  _s3 = new S3Client({
+    region: 'auto',
+    endpoint: process.env.R2_ENDPOINT.replace(/\/+$/, ''),
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
+const localUploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
+
+// 첨부 1건 정리 (R2 객체 + DB row) — 채팅 메시지 삭제 시 호출
+async function purgeAttachment(attachmentId) {
+  if (!attachmentId) return;
+  const att = await db.get('SELECT * FROM attachments WHERE id=?', attachmentId);
+  if (!att) return;
+  if (R2_ENABLED) {
+    try {
+      await _s3.send(new _DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: att.filename }));
+    } catch (e) { console.error('[chat] R2 객체 삭제 실패 (DB는 정리):', e.message); }
+  } else {
+    try { fs.unlinkSync(path.join(localUploadDir, att.filename)); } catch {}
+  }
+  await db.run('DELETE FROM attachments WHERE id=?', attachmentId);
+}
 
 // 첨부파일 메타를 메시지에 합쳐주는 헬퍼
 async function hydrateAttachments(messages) {
@@ -68,6 +105,27 @@ router.post('/', async (req, res) => {
     req.io.emit('chat:message', msg);
 
     res.json(msg);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// 메시지 삭제 (작성자 본인 또는 관리자) — 첨부도 함께 정리
+router.delete('/:id', async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const isAdmin = req.session.isAdmin;
+    const row = await db.get('SELECT * FROM chat_messages WHERE id=?', req.params.id);
+    if (!row) return res.status(404).json({ error: '메시지를 찾을 수 없습니다.' });
+    if (!isAdmin && row.user_id !== userId) {
+      return res.status(403).json({ error: '본인 메시지만 삭제할 수 있습니다.' });
+    }
+    // 첨부 먼저 정리
+    if (row.attachment_id) await purgeAttachment(row.attachment_id);
+    await db.run('DELETE FROM chat_messages WHERE id=?', req.params.id);
+
+    // Socket.io로 실시간 브로드캐스트
+    req.io.emit('chat:deleted', { id: Number(req.params.id) });
+
+    res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

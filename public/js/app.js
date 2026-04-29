@@ -167,6 +167,10 @@ function initApp(user) {
   window._socket.on('chat:message', (msg) => {
     if (typeof onChatSocketMessage === 'function') onChatSocketMessage(msg);
   });
+  // 실시간 채팅 메시지 삭제 수신
+  window._socket.on('chat:deleted', (data) => {
+    if (typeof removeChatMessageFromDom === 'function' && data?.id) removeChatMessageFromDom(data.id);
+  });
 
   // 실시간 활동 알림 수신
   window._socket.on('notification', (data) => {

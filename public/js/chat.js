@@ -81,29 +81,56 @@ function renderChatBody(m) {
 
 function buildChatMessage(m) {
   const isMine = m.user_id === window._currentUser?.id;
+  const isAdmin = window._currentUser?.is_admin;
+  const canDelete = (m.id && (isMine || isAdmin)); // 낙관적 추가 직후엔 id 없을 수 있음
   const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' }) : '';
   const avatarColors = ['avatar-coral','avatar-purple','avatar-blue','avatar-green','avatar-yellow'];
   const colorClass = avatarColors[(m.user_name||'').charCodeAt(0) % avatarColors.length] || 'avatar-coral';
   const body = renderChatBody(m);
+  const delBtn = canDelete
+    ? `<button class="chat-del-btn" onclick="deleteChatMessage(${m.id})" title="메시지 삭제" aria-label="메시지 삭제">×</button>`
+    : '';
 
   if (isMine) {
     return `
-      <div class="chat-msg chat-msg-mine">
+      <div class="chat-msg chat-msg-mine" data-msg-id="${m.id||''}">
         <div class="chat-bubble-wrap">
           <span class="chat-time">${timeStr}</span>
-          <div class="chat-bubble chat-bubble-mine">${body}</div>
+          <div class="chat-bubble chat-bubble-mine">${body}${delBtn}</div>
         </div>
       </div>`;
   } else {
     return `
-      <div class="chat-msg chat-msg-other">
+      <div class="chat-msg chat-msg-other" data-msg-id="${m.id||''}">
         <div class="chat-avatar ${colorClass}" aria-hidden="true">${(m.user_name||'?').slice(0,1)}</div>
         <div class="chat-bubble-wrap">
           <span class="chat-sender">${escapeHtmlChat(m.user_name||'')}</span>
-          <div class="chat-bubble">${body}</div>
+          <div class="chat-bubble">${body}${delBtn}</div>
           <span class="chat-time">${timeStr}</span>
         </div>
       </div>`;
+  }
+}
+
+// 메시지 삭제 — 본인 또는 관리자
+async function deleteChatMessage(id) {
+  if (!id) return;
+  if (!confirm('메시지를 삭제하시겠습니까? (첨부파일도 함께 삭제됩니다)')) return;
+  try {
+    await api.chat.delete(id);
+    removeChatMessageFromDom(id);
+  } catch (e) {
+    toast(e.message || '삭제 실패', 'error');
+  }
+}
+
+function removeChatMessageFromDom(id) {
+  const el = document.querySelector(`.chat-msg[data-msg-id="${id}"]`);
+  if (el) el.remove();
+  // 비어 있으면 empty state 다시 표시
+  const list = document.getElementById('chat-messages');
+  if (list && !list.querySelector('.chat-msg')) {
+    list.innerHTML = '<div class="chat-empty">아직 메시지가 없습니다.<br>첫 메시지를 보내보세요! 👋</div>';
   }
 }
 
@@ -183,25 +210,44 @@ async function sendChatMessage() {
   const sentAttachmentId = attachment?.id || null;
   const sentAttachment = attachment ? { ...attachment } : null;
   cancelChatAttachment();
+
+  // 임시 id로 낙관적 업데이트
+  const tempId = 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  const optimistic = {
+    id: null, // 삭제 버튼은 서버 응답 후에 활성화
+    user_id: window._currentUser?.id,
+    user_name: window._currentUser?.name || '',
+    content,
+    attachment_id: sentAttachmentId,
+    attachment: sentAttachment,
+    created_at: new Date().toISOString(),
+  };
+  const list = document.getElementById('chat-messages');
+  const emptyEl = list.querySelector('.chat-empty');
+  if (emptyEl) list.innerHTML = '';
+  // 임시 wrapper로 감싸 추후 식별
+  const tempHtml = buildChatMessage(optimistic).replace(
+    'data-msg-id=""',
+    `data-msg-id="${tempId}"`
+  );
+  list.insertAdjacentHTML('beforeend', tempHtml);
+  scrollChatToBottom();
+
   try {
-    // 로컬에 즉시 추가 (낙관적 업데이트)
-    const list = document.getElementById('chat-messages');
-    const emptyEl = list.querySelector('.chat-empty');
-    if (emptyEl) list.innerHTML = '';
-    list.insertAdjacentHTML('beforeend', buildChatMessage({
-      user_id: window._currentUser?.id,
-      user_name: window._currentUser?.name || '',
-      content,
-      attachment_id: sentAttachmentId,
-      attachment: sentAttachment,
-      created_at: new Date().toISOString(),
-    }));
-    scrollChatToBottom();
-    await api.chat.send({ content, attachment_id: sentAttachmentId });
+    const sent = await api.chat.send({ content, attachment_id: sentAttachmentId });
+    // 임시 메시지를 진짜 id로 교체 (삭제 버튼 활성화)
+    const tempEl = list.querySelector(`.chat-msg[data-msg-id="${tempId}"]`);
+    if (tempEl && sent?.id) {
+      const final = { ...optimistic, id: sent.id };
+      tempEl.outerHTML = buildChatMessage(final);
+    }
   } catch(e) {
     toast(e.message || '전송 실패', 'error');
     input.value = content;
     if (sentAttachment) { chatPendingAttachment = sentAttachment; showChatAttachmentPreview(sentAttachment); }
+    // 실패한 임시 메시지 제거
+    const tempEl = list.querySelector(`.chat-msg[data-msg-id="${tempId}"]`);
+    if (tempEl) tempEl.remove();
   }
 }
 
