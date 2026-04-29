@@ -1,3 +1,4 @@
 node_modules/
 database/kmcp.db
 .env
+.design-bundle/

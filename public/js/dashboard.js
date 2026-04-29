@@ -1,3 +1,21 @@
+// ===== Stroke icons (replace emoji in dashboard chrome) =====
+const ICON = {
+  flame: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s4 4 4 8a4 4 0 11-8 0c0-1 .5-2 1-3-2 1-4 4-4 7a7 7 0 1014 0c0-6-7-12-7-12z"/></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  checkCircle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+  pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`,
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14V9.76a2 2 0 00-.6-1.43l-2.7-2.7A2 2 0 0014.27 5H9.73a2 2 0 00-1.43.6L5.6 8.33A2 2 0 005 9.76V17z"/></svg>`,
+  utensils: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h2v11M11 2v20M16 2c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h2v10"/></svg>`,
+  calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  inbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>`,
+  car: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14l-1.5-7.5A2 2 0 0015.54 8H8.46a2 2 0 00-1.96 1.5L5 17z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>`,
+  flag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
+  wrench: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
+  pinPoint: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+};
+
 async function renderDashboard() {
   const page = document.getElementById('page-dashboard');
   const today = new Date().toISOString().split('T')[0];
@@ -59,7 +77,7 @@ async function renderDashboard() {
       <div style="margin-bottom:24px">
         ${upcomingAlerts.map(a => `
           <div class="meeting-alert alert-${a.type}">
-            <div class="meeting-alert-icon">${a.type === 'weekly' ? '📋' : '🔧'}</div>
+            <div class="meeting-alert-icon">${a.type === 'weekly' ? ICON.calendar : ICON.wrench}</div>
             <div class="meeting-alert-info">
               <h4>${a.title} 예정</h4>
               <p>${a.time}</p>
@@ -72,7 +90,7 @@ async function renderDashboard() {
 
     <!-- 오늘 보고서 상태 -->
     <div class="dash-report-banner ${todayMyReport ? 'done' : 'pending'}" onclick="${todayMyReport ? '' : "navigateTo('reports');setTimeout(()=>openReportForm(),300)"}">
-      <div class="dash-report-icon">${todayMyReport ? '✅' : '📝'}</div>
+      <div class="dash-report-icon">${todayMyReport ? ICON.checkCircle : ICON.pencil}</div>
       <div class="dash-report-info">
         <h4>${todayMyReport ? '오늘 업무보고 완료' : '오늘 업무보고를 작성하세요'}</h4>
         <p>${todayMyReport ? '보고서가 정상적으로 제출되었습니다' : '아직 오늘의 업무보고서가 없습니다'}</p>
@@ -83,28 +101,28 @@ async function renderDashboard() {
     <!-- 내 작업 요약 -->
     <div class="grid grid-4 mb-16">
       <div class="card stat-card clickable" onclick="navigateTo('kanban')">
-        <div class="stat-icon-wrap coral">🔥</div>
+        <div class="stat-icon-wrap coral">${ICON.flame}</div>
         <div>
           <div class="stat-value">${myInProgress.length}</div>
           <div class="stat-label">진행중</div>
         </div>
       </div>
       <div class="card stat-card clickable" onclick="navigateTo('kanban')">
-        <div class="stat-icon-wrap blue">📋</div>
+        <div class="stat-icon-wrap blue">${ICON.list}</div>
         <div>
           <div class="stat-value">${myPending.length}</div>
           <div class="stat-label">대기중</div>
         </div>
       </div>
       <div class="card stat-card clickable" onclick="navigateTo('kanban')">
-        <div class="stat-icon-wrap purple">🔍</div>
+        <div class="stat-icon-wrap purple">${ICON.search}</div>
         <div>
           <div class="stat-value">${myReview.length}</div>
           <div class="stat-label">검토중</div>
         </div>
       </div>
       <div class="card stat-card clickable" onclick="navigateTo('kanban')">
-        <div class="stat-icon-wrap green">✅</div>
+        <div class="stat-icon-wrap green">${ICON.check}</div>
         <div>
           <div class="stat-value">${myDone.length}</div>
           <div class="stat-label">완료</div>
@@ -134,7 +152,7 @@ async function renderDashboard() {
           </div>
           ${recentMeetings.length === 0 ? `
             <div class="empty-state" style="padding:24px">
-              <div class="empty-icon">📅</div>
+              <div class="empty-icon">${ICON.calendar}</div>
               <p>회의 기록이 없습니다</p>
             </div>
           ` : recentMeetings.map(m => `
@@ -158,8 +176,8 @@ async function renderDashboard() {
               <div class="card-title">고정 공지</div>
             </div>
             ${pinnedNotices.map(n => `
-              <div class="notice-item" style="padding:10px 0;border-bottom:1px solid var(--border-light)" onclick="navigateTo('notices')">
-                <span class="notice-pin" style="color:var(--coral)">📌</span>
+              <div class="notice-item" style="padding:10px 0;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:8px" onclick="navigateTo('notices')">
+                <span class="notice-pin" style="color:var(--coral);display:inline-flex;width:14px;height:14px">${ICON.pin}</span>
                 <div class="notice-title">${escHtml(n.title)}</div>
                 <div class="notice-meta">${formatDateKo(n.created_at.split('T')[0])}</div>
               </div>
@@ -218,7 +236,7 @@ async function renderDashboard() {
     ${(isFriday || isThursday || lunchPoll) ? `
     <div class="card mt-16 lunch-card">
       <div class="card-header">
-        <div class="card-title">🍽️ ${isFriday ? '금요일 외식!' : ''} 점심 메뉴 투표</div>
+        <div class="card-title" style="display:inline-flex;align-items:center;gap:8px"><span style="color:#B88B3A;display:inline-flex;width:16px;height:16px">${ICON.utensils}</span>${isFriday ? '금요일 외식!' : ''} 점심 메뉴 투표</div>
         ${!lunchPoll ? `<button class="btn btn-coral btn-sm" onclick="openLunchPollForm()">투표 만들기</button>` : ''}
       </div>
       ${lunchPoll ? renderLunchPoll(lunchPoll, userId) : `
@@ -240,7 +258,7 @@ async function renderDashboard() {
       </div>
       ${allReports.length === 0 ? `
         <div class="empty-state" style="padding:24px">
-          <div class="empty-icon">📭</div>
+          <div class="empty-icon">${ICON.inbox}</div>
           <p>아직 오늘 보고서가 없습니다</p>
         </div>
       ` : `<div class="team-report-grid">
@@ -266,7 +284,7 @@ async function renderDashboard() {
 }
 
 function renderMyTaskItem(t) {
-  const colors = { high: '#F06A6A', medium: '#4573D2', low: '#5DA283' };
+  const colors = { high: '#C85C4F', medium: '#4573D2', low: '#5DA283' };
   const statusIcons = {
     in_progress: '<span style="color:#4573D2;font-weight:700">▶</span>',
     pending: '<span style="color:#9CA6AF">○</span>',
@@ -310,7 +328,7 @@ function renderWeekReportChecklist(myReports, todayStr) {
     html += `
       <div class="week-report-day ${isToday ? 'today' : ''} ${isFuture ? 'future' : ''} ${checked ? 'checked' : ''}"
            onclick="${!isFuture ? (checked ? `viewReport(${report?.id})` : "navigateTo('reports');setTimeout(()=>openReportForm(),300)") : ''}">
-        <div class="week-day-check">${checked ? '✅' : (isFuture ? '·' : '⬜')}</div>
+        <div class="week-day-check">${checked ? `<span style="color:var(--green);display:inline-flex;width:16px;height:16px">${ICON.check}</span>` : (isFuture ? '·' : '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid var(--text-tertiary);border-radius:3px"></span>')}</div>
         <div class="week-day-label">${days[i]}  ${d.getMonth()+1}/${d.getDate()}</div>
         <div class="week-day-status">${checked ? '제출완료' : (isToday ? '작성필요' : (isFuture ? '-' : '미제출'))}</div>
       </div>
@@ -592,7 +610,7 @@ async function loadUpcomingEvents() {
     wrap.innerHTML = `
       <div class="upcoming-events-card">
         <div class="upcoming-events-header">
-          <span class="upcoming-events-title">📅 다가오는 일정</span>
+          <span class="upcoming-events-title" style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-flex;width:16px;height:16px;color:var(--coral)">${ICON.calendar}</span>다가오는 일정</span>
           <button class="btn btn-ghost btn-sm" onclick="navigateTo('calendar')">달력 보기 →</button>
         </div>
         <div class="upcoming-events-list">${rows}</div>
@@ -719,7 +737,7 @@ async function loadTodayFieldTrips() {
       html += `
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🚗 오늘 외근 · 출장</div>
+            <div class="card-title" style="display:inline-flex;align-items:center;gap:8px"><span style="color:var(--coral);display:inline-flex;width:16px;height:16px">${ICON.car}</span>오늘 외근 · 출장</div>
             <button class="btn btn-ghost btn-sm" onclick="navigateTo('fieldtrips')">전체 →</button>
           </div>
           ${trips.map(ft => `
@@ -727,7 +745,7 @@ async function loadTodayFieldTrips() {
               <div class="avatar avatar-sm ${getAvatarColor(ft.name)}">${(ft.name||'?').slice(0,1)}</div>
               <div style="flex:1;min-width:0">
                 <div style="font-weight:600;font-size:13px">${escHtml(ft.name)}</div>
-                <div style="font-size:12px;color:var(--text-secondary)">📍 ${escHtml(ft.destination)}${ft.purpose ? ' · '+escHtml(ft.purpose) : ''}</div>
+                <div style="font-size:12px;color:var(--text-secondary);display:inline-flex;align-items:center;gap:5px"><span style="color:var(--coral);display:inline-flex;width:12px;height:12px">${ICON.pinPoint}</span>${escHtml(ft.destination)}${ft.purpose ? ' · '+escHtml(ft.purpose) : ''}</div>
               </div>
               ${ft.return_time ? `<span style="font-size:11px;color:var(--text-tertiary)">복귀 ${ft.return_time}</span>` : ''}
             </div>`).join('')}
@@ -742,7 +760,7 @@ async function loadTodayFieldTrips() {
       html += `
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🏁 다가오는 마일스톤</div>
+            <div class="card-title" style="display:inline-flex;align-items:center;gap:8px"><span style="color:var(--coral);display:inline-flex;width:16px;height:16px">${ICON.flag}</span>다가오는 마일스톤</div>
             <button class="btn btn-ghost btn-sm" onclick="navigateTo('projects')">전체 →</button>
           </div>
           ${upcomingMS.map(ms => {

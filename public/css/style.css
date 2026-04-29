@@ -1,9 +1,13 @@
-/* ===== Asana-inspired Design System ===== */
+/* ===== KMCP Design System (refined terracotta) ===== */
 :root {
-  /* Colors */
-  --coral: #F06A6A;
-  --coral-hover: #E8585A;
-  --coral-light: #FFF4F3;
+  /* Colors — refined terracotta primary */
+  --coral: #C85C4F;
+  --coral-hover: #B14E42;
+  --coral-light: #FAEEEA;
+  --coral-soft: #E8A299;
+  --coral-wash: #FDF8F5;
+  --coral-deep-text: #9A4338;
+  --coral-tint-border: #F2DDD6;
   --purple: #AA62E3;
   --purple-light: #F3EDFF;
   --blue: #4573D2;
@@ -47,32 +51,116 @@
 /* ===== Reset ===== */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ===== 로그인 ===== */
+/* ===== Brand mark (geometric K) ===== */
+.brand-mark, .logo-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--coral); color: #fff; flex-shrink: 0;
+}
+.brand-mark svg, .logo-mark svg {
+  width: 60%; height: 60%;
+  stroke: currentColor; fill: none;
+  stroke-width: 2.4; stroke-linecap: square;
+}
+.logo-mark svg { stroke-width: 2.6; }
+
+/* ===== 로그인 (split editorial) ===== */
 .login-screen {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  background: #FAFAF8;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.login-ornament {
   background: var(--sidebar-bg);
+  color: #fff;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.login-ornament::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 80% 20%, rgba(200,92,79,0.18), transparent 55%),
+    radial-gradient(circle at 20% 90%, rgba(255,255,255,0.04), transparent 60%);
+  pointer-events: none;
+}
+.login-ornament-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+.login-ornament .o-mark {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--coral); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1;
+}
+.login-ornament .o-mark svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; }
+.login-ornament .o-quote {
+  position: relative; z-index: 1;
+  font-size: 22px; line-height: 1.45; font-weight: 600; letter-spacing: -0.4px;
+  color: rgba(255,255,255,0.92);
+  max-width: 420px;
+}
+.login-ornament .o-quote .accent { color: var(--coral-soft); }
+.login-ornament .o-foot {
+  position: relative; z-index: 1;
+  font-size: 12px; color: rgba(255,255,255,0.45);
+  letter-spacing: .2px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.login-form-panel {
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px;
 }
 .login-box {
-  background: var(--surface); border-radius: 16px; padding: 48px 44px; width: 400px;
-  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 380px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
-.login-logo { text-align: center; margin-bottom: 36px; }
+.login-logo {
+  text-align: left;
+  margin-bottom: 40px;
+  display: flex; align-items: center; gap: 10px;
+}
 .logo-mark {
-  width: 56px; height: 56px; border-radius: 14px; background: var(--coral);
-  color: white; font-size: 28px; font-weight: 700; display: inline-flex;
-  align-items: center; justify-content: center; margin-bottom: 16px;
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--coral); color: #fff;
+  font-size: 14px; font-weight: 700;
+  margin-bottom: 0;
 }
-.login-logo h1 { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
-.login-logo p { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
-/* 로그인/회원가입 전환 */
+.login-logo h1 {
+  font-size: 14px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.2px;
+}
+.login-logo p { display: none; }
+.login-heading {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.6px;
+  color: var(--text); margin-bottom: 6px;
+}
+.login-subheading {
+  font-size: 13px; color: var(--text-secondary);
+  margin-bottom: 28px;
+}
 .login-divider {
   display: flex; align-items: center; gap: 12px; margin: 20px 0;
-  color: var(--text-tertiary); font-size: 13px;
+  color: var(--text-tertiary); font-size: 12px;
 }
 .login-divider::before, .login-divider::after {
   content: ''; flex: 1; height: 1px; background: var(--border);
@@ -83,8 +171,64 @@ body {
   line-height: 1.5;
 }
 .error-msg {
-  color: var(--red); font-size: 13px; background: var(--red-light);
-  padding: 10px 14px; border-radius: var(--radius); margin-bottom: 12px;
+  background: var(--coral-light);
+  border: 1px solid var(--coral-tint-border);
+  color: var(--coral-deep-text);
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.error-msg::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--coral); flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .login-screen { grid-template-columns: 1fr; }
+  .login-ornament { display: none; }
+}
+
+/* underline-style inputs inside the login panel */
+.login-screen .form-group { margin-bottom: 18px; }
+.login-screen .form-group label {
+  display: block; font-size: 11px; font-weight: 600;
+  margin-bottom: 8px; color: var(--text-secondary);
+  letter-spacing: .3px; text-transform: uppercase;
+}
+.login-screen .form-group input,
+.login-screen .form-group select {
+  width: 100%;
+  padding: 11px 0;
+  border: none;
+  border-bottom: 1px solid #DFDDD8;
+  border-radius: 0;
+  background: transparent;
+  font: 14px inherit;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s ease;
+  box-shadow: none;
+}
+.login-screen .form-group input:focus,
+.login-screen .form-group select:focus {
+  border-bottom-color: var(--coral);
+  box-shadow: none;
+}
+/* primary CTA on login → dark button per editorial design */
+.login-screen .btn-primary {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 13px 16px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+.login-screen .btn-primary:hover { background: var(--sidebar-hover); }
+.login-screen .btn-secondary {
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-weight: 500;
 }
 
 /* ===== 레이아웃 ===== */
@@ -212,7 +356,7 @@ body {
   transition: all var(--transition); font-family: inherit; white-space: nowrap;
 }
 .btn-coral { background: var(--coral); color: white; }
-.btn-coral:hover { background: var(--coral-hover); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(240,106,106,0.3); }
+.btn-coral:hover { background: var(--coral-hover); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(200,92,79,0.3); }
 .btn-primary { background: var(--blue); color: white; }
 .btn-primary:hover { background: #3B63B8; }
 .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
@@ -319,6 +463,7 @@ body {
   width: 40px; height: 40px; border-radius: 10px; display: flex;
   align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
 }
+.meeting-alert-icon svg { width: 20px; height: 20px; }
 .alert-weekly .meeting-alert-icon { background: var(--purple); color: white; }
 .alert-technical .meeting-alert-icon { background: var(--blue); color: white; }
 .meeting-alert-info h4 { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -331,10 +476,11 @@ body {
   width: 44px; height: 44px; border-radius: 10px; display: flex;
   align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
 }
-.stat-icon-wrap.coral { background: var(--coral-light); }
-.stat-icon-wrap.blue { background: var(--blue-light); }
-.stat-icon-wrap.purple { background: var(--purple-light); }
-.stat-icon-wrap.green { background: var(--green-light); }
+.stat-icon-wrap svg { width: 20px; height: 20px; }
+.stat-icon-wrap.coral { background: var(--coral-light); color: var(--coral); }
+.stat-icon-wrap.blue { background: var(--blue-light); color: var(--blue); }
+.stat-icon-wrap.purple { background: var(--purple-light); color: var(--purple); }
+.stat-icon-wrap.green { background: var(--green-light); color: var(--green); }
 .stat-value { font-size: 24px; font-weight: 700; color: var(--text); }
 .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 1px; }
 
@@ -587,7 +733,8 @@ body {
 .notice-item:last-child { border-bottom: none; }
 .notice-item:hover { background: var(--surface-hover); }
 .notice-item.pinned { border-left: 3px solid var(--coral); }
-.notice-pin { font-size: 14px; flex-shrink: 0; }
+.notice-pin { font-size: 14px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.notice-pin svg { width: 14px; height: 14px; }
 .notice-title { font-size: 14px; font-weight: 500; flex: 1; color: var(--text); }
 .notice-meta { font-size: 12px; color: var(--text-tertiary); white-space: nowrap; }
 
@@ -630,7 +777,8 @@ body {
 .mb-4 { margin-bottom: 4px; } .mb-8 { margin-bottom: 8px; } .mb-16 { margin-bottom: 16px; }
 .flex { display: flex; } .items-center { align-items: center; } .gap-8 { gap: 8px; } .gap-12 { gap: 12px; }
 .empty-state { text-align: center; padding: 48px 20px; color: var(--text-tertiary); }
-.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; display: inline-flex; align-items: center; justify-content: center; }
+.empty-state .empty-icon svg { width: 32px; height: 32px; }
 .empty-state p { font-size: 14px; margin-top: 4px; }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
 .clickable { cursor: pointer; }
@@ -691,7 +839,9 @@ body {
 .dash-report-banner.done {
   background: var(--green-light); border-color: #A8D5BA; color: var(--text); cursor: default;
 }
-.dash-report-icon { font-size: 28px; flex-shrink: 0; }
+.dash-report-icon { font-size: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,0.6); color: var(--coral); }
+.dash-report-icon svg { width: 22px; height: 22px; }
+.dash-report-banner.done .dash-report-icon { color: var(--green); background: var(--green-light); }
 .dash-report-info h4 { font-size: 15px; font-weight: 600; }
 .dash-report-info p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
 

@@ -13,15 +13,38 @@
 
 <!-- 로그인 화면 -->
 <div id="login-screen" class="login-screen">
+  <!-- 좌측 브랜드 패널 -->
+  <aside class="login-ornament">
+    <div class="login-ornament-grid"></div>
+    <div class="o-mark">
+      <svg viewBox="0 0 32 32"><line x1="9" y1="6" x2="9" y2="26"/><line x1="9" y1="16" x2="22" y2="6"/><line x1="9" y1="16" x2="22" y2="26"/></svg>
+    </div>
+    <p class="o-quote">
+      매일의 보고가<br>
+      <span class="accent">한 번의 회의보다</span><br>
+      팀을 더 가깝게 만든다.
+    </p>
+    <div class="o-foot">
+      <span>KMCP 연구소 · 업무관리 포털</span>
+      <span>v1.4.2</span>
+    </div>
+  </aside>
+
+  <!-- 우측 폼 패널 -->
+  <main class="login-form-panel">
   <div class="login-box">
     <div class="login-logo">
-      <div class="logo-mark">K</div>
+      <div class="logo-mark">
+        <svg viewBox="0 0 32 32"><line x1="9" y1="6" x2="9" y2="26"/><line x1="9" y1="16" x2="22" y2="6"/><line x1="9" y1="16" x2="22" y2="26"/></svg>
+      </div>
       <h1>KMCP 연구소</h1>
       <p>업무관리 포털</p>
     </div>
 
     <!-- 로그인 폼 -->
     <form id="login-form">
+      <h2 class="login-heading">다시 만나서 반가워요</h2>
+      <p class="login-subheading">계정 정보를 입력하여 업무를 이어가세요.</p>
       <div class="form-group">
         <label>아이디</label>
         <input type="text" id="login-username" placeholder="아이디를 입력하세요" required>
@@ -68,6 +91,7 @@
       <button type="button" class="btn btn-ghost btn-full" style="margin-top:8px" onclick="showLoginForm()">로그인으로 돌아가기</button>
     </form>
   </div>
+  </main>
 </div>
 
 <!-- 메인 앱 -->
@@ -76,7 +100,9 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        <div class="brand-mark">K</div>
+        <div class="brand-mark">
+          <svg viewBox="0 0 32 32"><line x1="9" y1="6" x2="9" y2="26"/><line x1="9" y1="16" x2="22" y2="6"/><line x1="9" y1="16" x2="22" y2="26"/></svg>
+        </div>
         <span class="brand-text">KMCP 연구소</span>
       </div>
     </div>
