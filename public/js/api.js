@@ -137,7 +137,8 @@ const api = {
   },
   chat: {
     history: () => api.get('/api/chat'),
-    send: (content) => api.post('/api/chat', { content }),
+    // 인자: 문자열만 넘기면 기존처럼 동작, 객체로 넘기면 attachment_id 포함 가능
+    send: (arg) => api.post('/api/chat', typeof arg === 'string' ? { content: arg } : arg),
   },
   events: {
     list: (p) => api.get(`/api/events?${new URLSearchParams(p||{})}`),

@@ -41,7 +41,9 @@ const localUploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'upl
 if (!R2_ENABLED && !fs.existsSync(localUploadDir)) fs.mkdirSync(localUploadDir, { recursive: true });
 
 // 허용 대상 타입 화이트리스트
-const ALLOWED_TYPES = new Set(['report', 'meeting', 'notice', 'project', 'task', 'suggestion']);
+// 'chat'/'comment'는 부모 ID가 업로드 시점엔 없을 수 있음 (target_id=0 허용)
+// 메시지/댓글 INSERT 시 attachment_id로 연결됨
+const ALLOWED_TYPES = new Set(['report', 'meeting', 'notice', 'project', 'task', 'suggestion', 'chat', 'comment']);
 
 // multer: 메모리에 보관 후 R2로 스트리밍 (R2 모드) / 디스크에 저장 (로컬 모드)
 const upload = R2_ENABLED

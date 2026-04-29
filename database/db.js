@@ -318,6 +318,9 @@ async function initDB() {
   try { await db.exec("ALTER TABLE projects ADD COLUMN grant_number TEXT DEFAULT ''"); } catch(e) { /* 이미 존재 */ }
   // 마이그레이션: 댓글 익명 플래그
   try { await db.exec("ALTER TABLE comments ADD COLUMN is_anonymous INTEGER DEFAULT 0"); } catch(e) { /* 이미 존재 */ }
+  // 마이그레이션: 댓글/채팅 첨부파일 참조
+  try { await db.exec("ALTER TABLE comments ADD COLUMN attachment_id INTEGER"); } catch(e) { /* 이미 존재 */ }
+  try { await db.exec("ALTER TABLE chat_messages ADD COLUMN attachment_id INTEGER"); } catch(e) { /* 이미 존재 */ }
 
   // 첨부파일 테이블 (보고서/회의/공지 등 공통)
   try {
