@@ -76,6 +76,16 @@ function generateKey(originalName) {
   return `${stamp}-${rand}${ext}`;
 }
 
+// multer 1.x는 파일명을 latin1로 디코딩해서 한글이 깨짐 — UTF-8로 재해석
+// 브라우저는 RFC 7578에 따라 UTF-8 바이트로 보내므로 latin1 → utf8 재해석이 정답
+function fixUtf8Filename(file) {
+  if (!file?.originalname) return;
+  try {
+    const decoded = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    file.originalname = decoded;
+  } catch { /* 무시 — 원본 유지 */ }
+}
+
 // ===== 라우트 =====
 
 // 목록 조회
@@ -102,6 +112,8 @@ router.post('/:type/:id', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: '지원하지 않는 type입니다.' });
     }
     if (!req.file) return res.status(400).json({ error: '파일이 누락되었습니다.' });
+    // 한글 파일명 mojibake 수정 (latin1 → utf8)
+    fixUtf8Filename(req.file);
 
     const userId = req.session.userId;
     const userName = req.session.user?.name ||
